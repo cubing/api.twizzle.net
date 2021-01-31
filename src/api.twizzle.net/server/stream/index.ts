@@ -4,6 +4,7 @@ import {
   WebSocketServer,
   WebSocketState,
 } from "https://deno.land/x/websocket@v0.0.5/mod.ts";
+import { log } from "../../common/log.ts";
 
 // deno-lint-ignore no-explicit-any
 type WebSockerServer = any; // TODO
@@ -36,7 +37,7 @@ export class Stream {
   private receivingClients: Set<WebSocket> = new Set();
   public streamID: StreamID = newStreamID();
   constructor() {
-    console.info("Created stream", this.streamID)
+    log("Created stream", this.streamID)
   }
 
   addSendingClient(ws: WebSocket): void {
@@ -120,6 +121,7 @@ export class StreamServer {
 
   private wss: WebSockerServer;
   constructor(port: number) {
+    log(this, "starting on port:", port);
     this.wss = new WebSocketServer(port);
     this.wss.on("connection", this.onConnection.bind(this));
   }

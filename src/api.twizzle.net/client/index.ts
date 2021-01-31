@@ -1,7 +1,8 @@
+export { TwizzleAPIClient } from "./TwizzleAPIClient.ts";
+export type { TwizzleAPIStreamClient } from "./TwizzleAPIStreamClient.ts";
+
 import { clientScaffoldingImpl } from "./scaffolding.ts";
 
-const endpoint = "ws://127.0.0.1:4445";
-
-export function clientScaffolding() {
+export function clientScaffolding(endpoint: string) {
   clientScaffoldingImpl(endpoint);
 }
