@@ -27,27 +27,31 @@ export class Stream {
   // Idempotent: reuses an existing connection (or pending connection)
   // Returns once connected.
   async connect(): Promise<void> {
-    twizzleLog(this, "connecting");
+    twizzleLog(this, "connecting", this.streamID);
     this.#webSocket ||= new Promise((resolve, reject) => {
-      const params = new URLSearchParams();
+      const socketURL = new URL(this.streamURL);
       if (this.#streamClientToken) {
-        params.set("token", this.#streamClientToken);
+        // TODO: avoid including this in the URL?
+        socketURL.searchParams.set("token", this.#streamClientToken);
       }
       const webSocket = new WebSocket(
-        this.streamURL,
-        params.toString() || undefined,
+        socketURL.toString(),
       );
       webSocket.onopen = () => {
-        twizzleLog(this, "connected");
+        twizzleLog(this, "connected", this.streamID);
         webSocket.onmessage = this.onMessage.bind(this);
         webSocket.onclose = this.onClose.bind(this);
         this.#connnected = true;
         resolve(webSocket);
       };
-      setTimeout(reject, 10000); // TODO: exponential retry?
+      setTimeout(() => {
+        if (!this.#connnected) {
+          twizzleLog(this, "timeout:", this.streamID);
+          reject("timeout");
+        }
+      }, 10000); // TODO: exponential retry?
     });
     await this.#webSocket;
-    return;
   }
 
   // Idempotent: does nothing if already disconnected (or disconnecting)
@@ -60,17 +64,19 @@ export class Stream {
 
   // TODO: remove `any`
   // deno-lint-ignore no-explicit-any
-  async sendMove(data: { timestamp: number; move: any }): Promise<void> {
-    if (!this.#webSocket) {
-      // TODO: write test
-      throw new Error("cannot send to stream while disconnected");
-    }
-    (await this.#webSocket).send(
-      JSON.stringify({
-        event: "move",
-        data,
-      }),
-    );
+  sendMove(data: { timestamp: number; move: any }): void {
+    (async () => {
+      if (!this.#webSocket) {
+        // TODO: write test
+        throw new Error("cannot send to stream while disconnected");
+      }
+      (await this.#webSocket).send(
+        JSON.stringify({
+          event: "move",
+          data,
+        }),
+      );
+    })();
   }
 
   // deno-lint-ignore no-explicit-any
@@ -81,5 +87,6 @@ export class Stream {
 
   onClose(): void {
     twizzleLog(this, "closed:", this.streamID);
+    this.#connnected = false;
   }
 }

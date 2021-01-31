@@ -34,12 +34,13 @@ export class TwizzleAPIServer {
       const headers = new Headers({ "Access-Control-Allow-Origin": "*" });
       twizzleLog(this, "request for:", request.method, request.url);
       try {
-        const pathParts = request.url.split("/").slice(1);
+        const path = new URL(request.url, "https://localhost");
+        const pathParts = path.pathname.split("/").slice(1);
         if (request.method === "OPTIONS" && request.url === "/streams") {
           request.respond({
             status: 200,
-            headers
-          })
+            headers,
+          });
         }
         if (request.method === "GET" && request.url === "/streams") {
           this.getStreams(request, headers);
@@ -55,7 +56,7 @@ export class TwizzleAPIServer {
         } else {
           request.respond({
             status: 400,
-            headers
+            headers,
           });
         }
       } catch (e) {
@@ -81,14 +82,16 @@ export class TwizzleAPIServer {
       return;
     }
 
-    // TODO: this is a total hack.
-    const params = new URLSearchParams(
-      request.headers.get("sec-websocket-protocol") ?? "",
-    );
-    const maybeToken: string | null = params.get("token");
+    // TODO: don't include the token in the URL?
+    // Or maybe rename it to "secret streaming URL"?
+    const maybeToken: string | null = new URL(request.url, "http://localhost")
+      .searchParams.get(
+        "token",
+      );
 
     if (maybeToken) {
       if (!stream.isValidToken(maybeToken)) {
+        twizzleLog(this, "invalid token for", streamID);
         request.respond({
           status: 401,
           body: "invalid token sent",
@@ -130,7 +133,7 @@ export class TwizzleAPIServer {
     request.respond({
       status: 200,
       body: JSON.stringify(response),
-      headers
+      headers,
     });
   }
 

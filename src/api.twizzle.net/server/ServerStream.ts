@@ -54,18 +54,24 @@ export class ServerStream {
     (async () => {
       for await (const message of webSocket) {
         if (!clientIsPermittedToSend) {
-          if (!webSocket.isClosed) {
-            // TODO: why do we get a final message with code 1001?
-            twizzleLog(this, "closing!", client);
-            webSocket.close();
-          }
+          twizzleLog(
+            this,
+            "received message from client who is not permitted to send",
+            client,
+          );
           this.removeClient(client);
           return;
         } else {
           // TODO: process
           if (typeof message !== "string") {
-            throw new Error("unimplemented: non-string web socket messages");
+            twizzleLog(
+              this,
+              "error: received non-string web socket message from",
+              client.clientID,
+            );
+            continue;
           }
+          twizzleLog(this, "received move", message);
           this.broadcast(message);
         }
       }
@@ -75,6 +81,11 @@ export class ServerStream {
 
   removeClient(client: ServerStreamClient): void {
     twizzleLog(this, "removing client", client.clientID);
+    if (!client.webSocket.isClosed) {
+      // TODO: why do we get a final message with code 1001?
+
+      client.webSocket.close();
+    }
     this.clients.delete(client);
   }
 
