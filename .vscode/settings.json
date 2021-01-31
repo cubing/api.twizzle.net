@@ -1,0 +1,9 @@
+{
+  "deno.enable": true,
+  "deno.import_intellisense_origins": {
+    "https://deno.land": true,
+    "https://cdn.cubing.net": true,
+  },
+  "deno.unstable": true,
+  "deno.lint": true,
+}

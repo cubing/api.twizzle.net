@@ -1,0 +1,8 @@
+{
+  "name": "api.twizzle.net",
+  "version": "0.0.1",
+  "description": "",
+  "author": "Lucas Garron <code@garron.net>",
+  "license": "GPL-3.0-or-later",
+  "dependencies": {}
+}
