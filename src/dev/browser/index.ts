@@ -5,7 +5,7 @@ const client = new TwizzleAPIClient("http://127.0.0.1");
 
 (async () => {
   const streams = await client.streams();
-  console.log(streams)
+  console.log(streams);
   const stream = streams[0];
   stream.connect();
 
@@ -13,8 +13,8 @@ const client = new TwizzleAPIClient("http://127.0.0.1");
   await sendingStream.connect();
   console.log(sendingStream.sendMove({
     timestamp: 1,
-    move: BareBlockMove("R")
-  }))
+    move: BareBlockMove("R"),
+  }));
 
   console.log("indexing!");
 })();
