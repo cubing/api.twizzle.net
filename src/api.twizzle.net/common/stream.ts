@@ -1,6 +1,7 @@
 // UUID
 // TODO: include prefix in type?
 export type StreamID = string;
+export type ClientID = string;
 export type StreamClientToken = string;
 
 export interface StreamInfo {
@@ -9,7 +10,7 @@ export interface StreamInfo {
 }
 
 export interface StreamsGETResponse {
-  streams: StreamInfo[]
+  streams: StreamInfo[];
 }
 
 export type StreamsPOSTResponse = StreamInfo;

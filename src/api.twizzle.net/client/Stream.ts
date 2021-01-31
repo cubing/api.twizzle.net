@@ -1,6 +1,6 @@
 // import { WebSocket } from "https://deno.land/x/websocket@v0.0.5/mod.ts";
 import { twizzleLog } from "../common/log.ts";
-import { StreamID, StreamClientToken } from "../common/stream.ts";
+import { StreamClientToken, StreamID } from "../common/stream.ts";
 
 export class Stream {
   #webSocket: Promise<WebSocket> | null = null;
@@ -11,7 +11,7 @@ export class Stream {
     public streamID: StreamID,
     options?: {
       streamClientToken?: StreamClientToken;
-    }
+    },
   ) {
     this.#streamClientToken = options?.streamClientToken ?? null;
   }
@@ -33,10 +33,9 @@ export class Stream {
       if (this.#streamClientToken) {
         params.set("token", this.#streamClientToken);
       }
-      // TODO: use stdlib
       const webSocket = new WebSocket(
         this.streamURL,
-        params.toString() || undefined
+        params.toString() || undefined,
       );
       webSocket.onopen = () => {
         twizzleLog(this, "connected");
@@ -54,8 +53,9 @@ export class Stream {
   // Idempotent: does nothing if already disconnected (or disconnecting)
   // Returns once disconnected.
   async disconnect(): Promise<void> {
-    await (await this.#webSocket)?.close();
-    return;
+    const webSocketPromise = this.#webSocket;
+    this.#webSocket = null;
+    (await webSocketPromise)?.close();
   }
 
   // TODO: remove `any`
@@ -69,7 +69,7 @@ export class Stream {
       JSON.stringify({
         event: "move",
         data,
-      })
+      }),
     );
   }
 

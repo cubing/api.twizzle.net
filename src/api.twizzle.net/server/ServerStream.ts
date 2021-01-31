@@ -1,8 +1,6 @@
-
-import {
-  WebSocket,
-} from "https://deno.land/std@0.85.0/ws/mod.ts";
-import { StreamClientToken, StreamID } from "../common/stream.ts";
+import { WebSocket } from "https://deno.land/std@0.85.0/ws/mod.ts";
+import { twizzleLog } from "../common/log.ts";
+import { ClientID, StreamClientToken, StreamID } from "../common/stream.ts";
 
 function buf2hex(buffer: Uint8Array): string {
   return Array.prototype.map
@@ -16,15 +14,24 @@ function newStreamID(): StreamID {
   return "twizzle_stream_" + buf2hex(array);
 }
 
+function newClientID(): ClientID {
+  var array = new Uint8Array(8);
+  window.crypto.getRandomValues(array);
+  return "client_" + buf2hex(array);
+}
+
 function newStreamClientToken(): StreamClientToken {
   var array = new Uint8Array(8);
   window.crypto.getRandomValues(array);
   return "token_" + buf2hex(array);
 }
 
-interface ServerStreamClient {
-  webSocket: WebSocket;
-  clientIsPermittedToSend: boolean;
+class ServerStreamClient {
+  clientID: ClientID = newClientID();
+  constructor(
+    public webSocket: WebSocket,
+    public clientIsPermittedToSend: boolean,
+  ) {}
 }
 
 export class ServerStream {
@@ -37,19 +44,23 @@ export class ServerStream {
     webSocket: WebSocket,
     options?: {
       streamClientToken?: StreamClientToken | null;
-    }
+    },
   ): void {
-    const clientIsPermittedToSend = options?.streamClientToken === this.streamClientToken;
-    const client = {
-      webSocket,
-      clientIsPermittedToSend: clientIsPermittedToSend,
-    };
+    const clientIsPermittedToSend =
+      options?.streamClientToken === this.streamClientToken;
+    const client = new ServerStreamClient(webSocket, clientIsPermittedToSend);
     this.clients.add(client);
 
     (async () => {
       for await (const message of webSocket) {
         if (!clientIsPermittedToSend) {
-          webSocket.close();
+          if (!webSocket.isClosed) {
+            // TODO: why do we get a final message with code 1001?
+            twizzleLog(this, "closing!", client);
+            webSocket.close();
+          }
+          this.removeClient(client);
+          return;
         } else {
           // TODO: process
           if (typeof message !== "string") {
@@ -58,8 +69,13 @@ export class ServerStream {
           this.broadcast(message);
         }
       }
-      this.clients.delete(client);
+      this.removeClient(client);
     })();
+  }
+
+  removeClient(client: ServerStreamClient): void {
+    twizzleLog(this, "removing client", client.clientID);
+    this.clients.delete(client);
   }
 
   isValidToken(streamClientToken: StreamClientToken): boolean {

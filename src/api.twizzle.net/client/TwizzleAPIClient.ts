@@ -1,5 +1,9 @@
 import { twizzleLog } from "../common/log.ts";
-import { StreamInfo, StreamsGETResponse, StreamsPOSTResponse } from "../common/stream.ts";
+import {
+  StreamInfo,
+  StreamsGETResponse,
+  StreamsPOSTResponse,
+} from "../common/stream.ts";
 import { Stream } from "./Stream.ts";
 
 const mainPort = 4444;
@@ -41,18 +45,22 @@ export class TwizzleAPIClient {
       response.streamID,
       {
         streamClientToken: response.streamClientToken,
-      }
+      },
     );
   }
 
   async streams(): Promise<Stream[]> {
-    const response: StreamsGETResponse = await (await fetch(mainAPIURL(this.baseOrigin, "/streams"))).json();
+    const response: StreamsGETResponse =
+      await (await fetch(mainAPIURL(this.baseOrigin, "/streams"))).json();
     return response.streams.map(
       (streamInfo: StreamInfo) =>
         new Stream(
-          streamAPIURL(this.baseOrigin, `/streams/${streamInfo.streamID}/socket`),
-          streamInfo.streamID
-        )
+          streamAPIURL(
+            this.baseOrigin,
+            `/streams/${streamInfo.streamID}/socket`,
+          ),
+          streamInfo.streamID,
+        ),
     );
   }
 }
