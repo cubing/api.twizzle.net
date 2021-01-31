@@ -3,6 +3,8 @@ import { TwizzleAPIClient } from "../../api.twizzle.net/client/index.ts";
 
 const client = new TwizzleAPIClient("http://127.0.0.1");
 
+(window as any).client = client;
+
 (async () => {
   // const streams = await client.streams();
   // console.log(streams);

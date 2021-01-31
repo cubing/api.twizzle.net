@@ -36,12 +36,12 @@ export class TwizzleAPIClient {
 
   async createStream(): Promise<Stream> {
     const response: StreamsPOSTResponse = await (
-      await fetch(mainAPIURL(this.baseOrigin, "/streams"), {
+      await fetch(mainAPIURL(this.baseOrigin, "/v0/streams"), {
         method: "POST",
       })
     ).json();
     return new Stream(
-      streamAPIURL(this.baseOrigin, `/streams/${response.streamID}/socket`),
+      streamAPIURL(this.baseOrigin, `/v0/streams/${response.streamID}/socket`),
       response.streamID,
       {
         streamClientToken: response.streamClientToken,
@@ -51,13 +51,13 @@ export class TwizzleAPIClient {
 
   async streams(): Promise<Stream[]> {
     const response: StreamsGETResponse =
-      await (await fetch(mainAPIURL(this.baseOrigin, "/streams"))).json();
+      await (await fetch(mainAPIURL(this.baseOrigin, "/v0/streams"))).json();
     return response.streams.map(
       (streamInfo: StreamInfo) =>
         new Stream(
           streamAPIURL(
             this.baseOrigin,
-            `/streams/${streamInfo.streamID}/socket`,
+            `/v0/streams/${streamInfo.streamID}/socket`,
           ),
           streamInfo.streamID,
         ),

@@ -36,23 +36,23 @@ export class TwizzleAPIServer {
       try {
         const path = new URL(request.url, "https://localhost");
         const pathParts = path.pathname.split("/").slice(1);
-        if (request.method === "OPTIONS" && request.url === "/streams") {
+        if (request.method === "OPTIONS" && request.url === "/v0/streams") {
           request.respond({
             status: 200,
             headers,
           });
         }
-        if (request.method === "GET" && request.url === "/streams") {
+        if (request.method === "GET" && request.url === "/v0/streams") {
           this.getStreams(request, headers);
-        } else if (request.method === "POST" && request.url === "/streams") {
+        } else if (request.method === "POST" && request.url === "/v0/streams") {
           this.postStreams(request, headers);
         } else if (
-          request.method === "GET" && request.url.startsWith("/streams/") &&
-          pathParts.length === 3 && pathParts[2] === "socket" &&
+          request.method === "GET" && request.url.startsWith("/v0/streams/") &&
+          pathParts.length === 4 && pathParts[3] === "socket" &&
           acceptable(request)
         ) {
           // Note: no `await`
-          this.streamsSocketHandler(request, pathParts[1]);
+          this.streamsSocketHandler(request, pathParts[2]);
         } else {
           request.respond({
             status: 400,
@@ -138,8 +138,12 @@ export class TwizzleAPIServer {
   }
 
   newStream(): ServerStream {
-    const stream = new ServerStream();
+    const stream = new ServerStream(this.streamTerminated.bind(this));
     this.streams.set(stream.streamID, stream);
     return stream;
+  }
+
+  streamTerminated(stream: ServerStream): void {
+    this.streams.delete(stream.streamID);
   }
 }

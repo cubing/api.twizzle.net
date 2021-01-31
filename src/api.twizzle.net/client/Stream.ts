@@ -37,19 +37,20 @@ export class Stream {
       const webSocket = new WebSocket(
         socketURL.toString(),
       );
+      const timeoutID = setTimeout(() => {
+        if (!this.#connnected) {
+          twizzleLog(this, "timeout:", this.streamID);
+          reject("timeout");
+        }
+      }, 10000); // TODO: exponential retry?
       webSocket.onopen = () => {
         twizzleLog(this, "connected", this.streamID);
         webSocket.onmessage = this.onMessage.bind(this);
         webSocket.onclose = this.onClose.bind(this);
         this.#connnected = true;
         resolve(webSocket);
+        clearTimeout(timeoutID);
       };
-      setTimeout(() => {
-        if (!this.#connnected) {
-          twizzleLog(this, "timeout:", this.streamID);
-          reject("timeout");
-        }
-      }, 10000); // TODO: exponential retry?
     });
     await this.#webSocket;
   }
