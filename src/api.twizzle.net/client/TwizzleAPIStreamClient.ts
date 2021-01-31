@@ -1,15 +1,15 @@
 import { WebSocket } from "https://deno.land/x/websocket@v0.0.5/mod.ts";
-import { log } from "../common/log.ts";
+import { twizzleLog } from "../common/log.ts";
 import { StreamID } from "../common/stream.ts";
 
 export class TwizzleAPIStreamClient {
   private webSocket: Promise<WebSocket>;
-  constructor(url: string) {
-    log(this, "starting with url", url);
+  constructor(urlString: string) {
+    twizzleLog(this, "starting with url", urlString);
     this.webSocket = new Promise((resolve, reject) => {
-      const webSocket = new WebSocket(url);
+      const webSocket = new WebSocket(urlString);
       webSocket.once("open", () => {
-        log(this, "connected");
+        twizzleLog(this, "connected");
         resolve(webSocket);
       });
       setTimeout(reject, 10000); // TODO: exponential retry?

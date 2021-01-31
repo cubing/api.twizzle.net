@@ -2,10 +2,10 @@
 import {
   WebSocket,
   WebSocketServer,
-  WebSocketState,
+  WebSocketState
 } from "https://deno.land/x/websocket@v0.0.5/mod.ts";
-import { log } from "../common/log.ts";
-import { StreamID } from "../common/stream.ts";
+import { twizzleLog } from "../common/log.ts";
+import { StreamClientToken, StreamID } from "../common/stream.ts";
 
 // deno-lint-ignore no-explicit-any
 type WebSockerServer = any; // TODO
@@ -34,8 +34,9 @@ export class Stream {
   private sendingClients: Set<WebSocket> = new Set();
   private receivingClients: Set<WebSocket> = new Set();
   public streamID: StreamID = newStreamID();
+  public sendingClientToken: StreamClientToken = newStreamClientToken();
   constructor() {
-    log("Created stream", this.streamID)
+    twizzleLog("Created stream", this.streamID)
   }
 
   addSendingClient(ws: WebSocket): void {
@@ -114,19 +115,25 @@ function newStreamID(): StreamID {
   return "twizzle_stream_" + buf2hex(array);
 }
 
+function newStreamClientToken(): StreamClientToken {
+  var array = new Uint8Array(8);
+  window.crypto.getRandomValues(array);
+  return "token_" + buf2hex(array);
+}
+
 export class StreamServer {
   streams: Map<StreamID, Stream> = new Map<StreamID, Stream>();
 
   private wss: WebSockerServer;
   constructor(port: number) {
-    log(this, "starting on port:", port);
+    twizzleLog(this, "starting on port:", port);
     this.wss = new WebSocketServer(port);
     this.wss.on("connection", this.onConnection.bind(this));
   }
 
   onConnection(ws: WebSocket): void {
     ws.once("message", (message: string) => {
-      console.log("new connection!", message)
+      console.log("new connection!", message);
       const messageJSON: InitialIncomingMessage = JSON.parse(message);
       switch (messageJSON.event) {
         case "request-to-send": {
@@ -163,12 +170,18 @@ export class StreamServer {
     const stream = new Stream();
     const initialOutgoingMessage: InitialOutgoingMessage = {
       event: "start-send",
-      streamID: stream.streamID
+      streamID: stream.streamID,
     };
     stream.addSendingClient(ws);
     ws.send(JSON.stringify(initialOutgoingMessage));
     this.streams.set(stream.streamID, stream);
     console.info(`Stream created: ${stream}`);
+  }
+
+  newStream(): Stream {
+    const stream = new Stream();
+    this.streams.set(stream.streamID, stream);
+    return stream;
   }
 }
 
