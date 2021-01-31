@@ -1,8 +1,6 @@
 import { WebSocket } from "https://deno.land/x/websocket@v0.0.5/mod.ts";
-
-import { StreamID } from "../server/stream/index.ts";
-
 import { BareBlockMove } from "https://cdn.skypack.dev/cubing/alg";
+import { StreamID } from "../common/stream.ts";
 
 export function clientScaffoldingImpl(endpoint: string) {
   {

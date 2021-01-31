@@ -4,13 +4,11 @@ import {
   WebSocketServer,
   WebSocketState,
 } from "https://deno.land/x/websocket@v0.0.5/mod.ts";
-import { log } from "../../common/log.ts";
+import { log } from "../common/log.ts";
+import { StreamID } from "../common/stream.ts";
 
 // deno-lint-ignore no-explicit-any
 type WebSockerServer = any; // TODO
-
-// UUID
-export type StreamID = string;
 
 type InitialIncomingMessage =
   | {
