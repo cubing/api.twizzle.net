@@ -1,4 +1,4 @@
-import { WebSocket } from "https://deno.land/x/websocket@v0.0.5/mod.ts";
+// import { WebSocket } from "https://deno.land/x/websocket@v0.0.5/mod.ts";
 import { twizzleLog } from "../common/log.ts";
 import { StreamID, StreamClientToken } from "../common/stream.ts";
 
@@ -29,13 +29,22 @@ export class Stream {
   async connect(): Promise<void> {
     twizzleLog(this, "connecting");
     this.#webSocket ||= new Promise((resolve, reject) => {
-      const webSocket = new WebSocket(this.streamURL);
-      webSocket.once("open", () => {
+      const params = new URLSearchParams();
+      if (this.#streamClientToken) {
+        params.set("token", this.#streamClientToken);
+      }
+      // TODO: use stdlib
+      const webSocket = new WebSocket(
+        this.streamURL,
+        params.toString() || undefined
+      );
+      webSocket.onopen = () => {
         twizzleLog(this, "connected");
-        webSocket.on("message", this.onMessage.bind(this))
+        webSocket.onmessage = this.onMessage.bind(this);
+        webSocket.onclose = this.onClose.bind(this);
         this.#connnected = true;
         resolve(webSocket);
-      });
+      };
       setTimeout(reject, 10000); // TODO: exponential retry?
     });
     await this.#webSocket;
@@ -64,7 +73,13 @@ export class Stream {
     );
   }
 
-  onMessage(message: string): void {
-    console.log(message);
+  // deno-lint-ignore no-explicit-any
+  onMessage(messageEvent: MessageEvent<any>): void {
+    const message = JSON.parse(messageEvent.data); // TODO: error handling
+    console.log("onMessage", message);
+  }
+
+  onClose(): void {
+    twizzleLog(this, "closed:", this.streamID);
   }
 }
