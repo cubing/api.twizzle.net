@@ -1,7 +1,7 @@
 // deno-lint-ignore-file  camelcase
 
 const TWIZZLE_CLIENT_ID = "3GaLUmFKGG-61B1KTmkJnu2NWNbCmuKANvRuAcwKM-E";
-const REDIRECT_URI = "http://localhost:4444/v0/auth/wca";
+const REDIRECT_URI = "http://localhost:4444/v0/auth/wca/oauth_callback";
 
 export type WCAAccountID = number;
 

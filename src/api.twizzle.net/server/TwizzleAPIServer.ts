@@ -49,9 +49,13 @@ export class TwizzleAPIServer {
         if (request.method === "GET" && path === "/v0/streams") {
           this.getStreams(request, headers);
         } else if (
-          request.method === "GET" && path === "/v0/auth/wca"
+          request.method === "POST" && path === "/v0/claim"
         ) {
-          this.authWCA(request, headers);
+          this.claim(request, headers);
+        } else if (
+          request.method === "GET" && path === "/v0/auth/wca/oauth_callback"
+        ) {
+          this.authWCACallback(request, headers);
         } else if (
           request.method === "POST" && path === "/v0/streams"
         ) {
@@ -157,12 +161,49 @@ export class TwizzleAPIServer {
     this.streams.delete(stream.streamID);
   }
 
-  async authWCA(request: ServerRequest, headers: Headers): Promise<void> {
-    const code = new URL(request.url, "https://localhost").searchParams.get(
-      "code",
-    );
+  claim(
+    request: ServerRequest,
+    headers: Headers,
+  ): void {
+    const maybeClaimToken = new URL(request.url, "https://localhost")
+      .searchParams.get(
+        "claimToken",
+      );
+    if (!maybeClaimToken) {
+      request.respond({
+        status: 400,
+        headers,
+      });
+      return;
+    }
+    const maybeUser = this.users.claim(maybeClaimToken);
+    if (!maybeUser) {
+      request.respond({
+        status: 401,
+        headers,
+      });
+      return;
+    }
+    twizzleLog(this, "claim token successfully used for user", maybeUser.id);
+    request.respond({
+      status: 200,
+      headers,
+      body: JSON.stringify({
+        twizzleAccessToken: maybeUser.twizzleAccessToken,
+      }),
+    });
+  }
 
-    if (!code) {
+  async authWCACallback(
+    request: ServerRequest,
+    headers: Headers,
+  ): Promise<void> {
+    const maybeCode = new URL(request.url, "https://localhost").searchParams
+      .get(
+        "code",
+      );
+
+    if (!maybeCode) {
       twizzleLog(this, "failed auth");
       request.respond({
         status: 400,
@@ -173,9 +214,17 @@ export class TwizzleAPIServer {
     }
 
     const accountInfo = await wcaGetToken(
-      code,
+      maybeCode,
       TWIZZLE_WCA_APPLICATION_CLIENT_SECRET,
     );
-    this.users.addWCAUser(accountInfo);
+    const user = this.users.addWCAUser(accountInfo);
+    const url = new URL("http://localhost:1234/"); // TODO: return_to?
+    url.searchParams.set("claimToken", this.users.createClaimToken(user));
+    request.respond({
+      status: 302,
+      headers: new Headers({
+        "Location": url.toString(),
+      }),
+    });
   }
 }

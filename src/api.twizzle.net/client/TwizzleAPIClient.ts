@@ -1,3 +1,4 @@
+import { ClaimToken, TwizzleAccessToken } from "../common/auth.ts";
 import { twizzleLog } from "../common/log.ts";
 import {
   StreamInfo,
@@ -31,7 +32,10 @@ function streamAPIURL(baseOrigin: string, pathname?: string): string {
 }
 
 export class TwizzleAPIClient {
-  constructor(private baseOrigin: string) {
+  constructor(
+    private baseOrigin: string,
+    private storage: Record<string, string>,
+  ) {
     twizzleLog(this, "starting");
   }
 
@@ -65,7 +69,22 @@ export class TwizzleAPIClient {
     );
   }
 
-  authURL(): string {
+  wcaAuthURL(): string {
     return wcaOAuthStartURL();
+  }
+
+  authenticated(): boolean {
+    return this.storage["twizzleAccessToken"].startsWith(
+      "twizzle_access_token_",
+    );
+  }
+
+  async claim(claimToken: ClaimToken): Promise<void> {
+    const url = new URL(mainAPIURL(this.baseOrigin, "/v0/claim"));
+    url.searchParams.set("claimToken", claimToken);
+    const twizzleAccessToken: TwizzleAccessToken =
+      (await (await fetch(url, { method: "POST" }))
+        .json()).twizzleAccessToken;
+    this.storage["twizzleAccessToken"] = twizzleAccessToken;
   }
 }

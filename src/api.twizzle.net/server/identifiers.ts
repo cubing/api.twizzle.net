@@ -1,4 +1,8 @@
-import { TwizzleAccessToken, TwizzleUserID } from "../common/auth.ts";
+import {
+  ClaimToken,
+  TwizzleAccessToken,
+  TwizzleUserID,
+} from "../common/auth.ts";
 import { ClientID, StreamClientToken, StreamID } from "../common/stream.ts";
 
 const DEFAULT_ENTROPY_NUM_BYTES = 8;
@@ -28,14 +32,18 @@ export function newClientID(): ClientID {
   return hexIDWithPrefix("client_");
 }
 
-export function newStreamClientToken(): StreamClientToken {
-  return hexIDWithPrefix("token_", { entropyNumBytes: 16 });
-}
-
 export function newTwizzleUserID(): TwizzleUserID {
   return hexIDWithPrefix("user_");
 }
 
+export function newStreamClientToken(): StreamClientToken {
+  return hexIDWithPrefix("token_", { entropyNumBytes: 16 });
+}
+
 export function newTwizzleAccessToken(): TwizzleAccessToken {
-  return hexIDWithPrefix("twizzle_token_", { entropyNumBytes: 16 });
+  return hexIDWithPrefix("twizzle_access_token_", { entropyNumBytes: 16 });
+}
+
+export function newClaimToken(): ClaimToken {
+  return hexIDWithPrefix("claim_token_", { entropyNumBytes: 16 });
 }

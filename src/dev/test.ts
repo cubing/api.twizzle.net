@@ -5,7 +5,7 @@ import { TwizzleAPIServer } from "../api.twizzle.net/server/index.ts";
 console.log("Starting dev script.");
 
 const server = new TwizzleAPIServer();
-const client = new TwizzleAPIClient("http://127.0.0.1");
+const client = new TwizzleAPIClient("http://127.0.0.1", {});
 
 setTimeout(async () => {
   const sendingStream = await client.createStream();
