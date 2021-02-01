@@ -8,16 +8,17 @@ import {
   acceptWebSocket,
   WebSocket,
 } from "https://deno.land/std@0.85.0/ws/mod.ts";
+import { TwizzleAccessToken } from "../common/auth.ts";
 import { twizzleLog } from "../common/log.ts";
 import {
   StreamID,
   StreamsGETResponse,
   StreamsPOSTResponse,
 } from "../common/stream.ts";
-import { WCAAccountID, WCAAccountInfo, wcaGetToken } from "../common/wca.ts";
+import { wcaGetToken } from "../common/wca.ts";
 import { TWIZZLE_WCA_APPLICATION_CLIENT_SECRET } from "./config.ts";
 import { ServerStream } from "./ServerStream.ts";
-import { TwizzleUsers } from "./TwizzleUsers.ts";
+import { TwizzleUser, TwizzleUsers } from "./TwizzleUsers.ts";
 
 export const REST_SERVER_PORT = 4444;
 export const STREAM_SERVER_PORT = 4445;
@@ -66,7 +67,7 @@ export class TwizzleAPIServer {
           acceptable(request)
         ) {
           // Note: no `await`
-          this.streamsSocketHandler(request, pathParts[2]);
+          this.streamsSocketHandler(request, headers, pathParts[2]);
         } else {
           request.respond({
             status: 400,
@@ -83,38 +84,65 @@ export class TwizzleAPIServer {
     }
   }
 
+  userByParamToken(
+    request: ServerRequest,
+    headers: Headers,
+  ): { haltNow: boolean; user: TwizzleUser | null } {
+    // TODO: don't include the token in the URL?
+    // Or maybe rename it to "secret streaming URL"?
+    const maybeTwizzleAccessToken: TwizzleAccessToken | null = new URL(
+      request.url,
+      "http://localhost",
+    ).searchParams.get(
+      "twizzleAccessToken",
+    );
+
+    if (!maybeTwizzleAccessToken) {
+      return { haltNow: false, user: null };
+    }
+
+    const maybeUser = this.users.tokenToUser.get(maybeTwizzleAccessToken) ??
+      null;
+    if (!maybeUser) {
+      twizzleLog(this, "invalid twizzle access token");
+      request.respond({
+        status: 401,
+        headers,
+        body: "invalid twizzle access token",
+      });
+      return { haltNow: true, user: null };
+    }
+
+    return { haltNow: false, user: maybeUser };
+  }
+
   async streamsSocketHandler(
     request: ServerRequest,
+    headers: Headers,
     streamID: StreamID,
   ): Promise<void> {
     const stream: ServerStream | undefined = this.streams.get(streamID);
     if (!stream) {
       request.respond({
         status: 404,
+        headers,
         body: "stream ID is unknown",
       });
       return;
     }
 
-    // TODO: don't include the token in the URL?
-    // Or maybe rename it to "secret streaming URL"?
-    const maybeToken: string | null = new URL(request.url, "http://localhost")
-      .searchParams.get(
-        "token",
-      );
-
-    if (maybeToken) {
-      if (!stream.isValidToken(maybeToken)) {
-        twizzleLog(this, "invalid token for", streamID);
-        request.respond({
-          status: 401,
-          body: "invalid token sent",
-        });
-        return;
-      }
+    const { haltNow, user } = this.userByParamToken(request, headers);
+    if (haltNow) {
+      return;
     }
 
-    twizzleLog(this, "adding client for stream:", streamID);
+    twizzleLog(
+      this,
+      "adding client for stream:",
+      streamID,
+      "for user:",
+      user?.id,
+    );
     const webSocket: WebSocket = (await acceptWebSocket({
       conn: request.conn,
       bufReader: request.r,
@@ -122,9 +150,7 @@ export class TwizzleAPIServer {
       headers: request.headers,
     }));
 
-    stream.addClient(webSocket, {
-      streamClientToken: maybeToken,
-    });
+    stream.addClient(webSocket, user);
   }
 
   getStreams(request: ServerRequest, headers: Headers): void {
@@ -139,10 +165,14 @@ export class TwizzleAPIServer {
   }
 
   postStreams(request: ServerRequest, headers: Headers): void {
-    const stream: ServerStream = this.newStream();
+    const { haltNow, user } = this.userByParamToken(request, headers);
+    if (haltNow) {
+      return;
+    }
+
+    const stream: ServerStream = this.newStream(user);
     const response: StreamsPOSTResponse = {
       streamID: stream.streamID,
-      streamClientToken: stream.streamClientToken,
     };
     request.respond({
       status: 200,
@@ -151,8 +181,12 @@ export class TwizzleAPIServer {
     });
   }
 
-  newStream(): ServerStream {
-    const stream = new ServerStream(this.streamTerminated.bind(this));
+  newStream(user: TwizzleUser | null): ServerStream {
+    const stream = new ServerStream(
+      this.streamTerminated.bind(this),
+      user ? [user] : [],
+    );
+    console.log("SDfsdf", user);
     this.streams.set(stream.streamID, stream);
     return stream;
   }
@@ -161,6 +195,7 @@ export class TwizzleAPIServer {
     this.streams.delete(stream.streamID);
   }
 
+  // TODO: reuse OAuth claiming mechanism?
   claim(
     request: ServerRequest,
     headers: Headers,

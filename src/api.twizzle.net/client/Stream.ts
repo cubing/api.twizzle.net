@@ -1,23 +1,26 @@
 // import { WebSocket } from "https://deno.land/x/websocket@v0.0.5/mod.ts";
+import { TwizzleAccessToken } from "../common/auth.ts";
 import { twizzleLog } from "../common/log.ts";
 import { StreamClientToken, StreamID } from "../common/stream.ts";
 
 export class Stream {
+  #streamURL: string;
   #webSocket: Promise<WebSocket> | null = null;
   #connnected = false;
-  #streamClientToken: StreamClientToken | null;
+  #twizzleAccessToken: TwizzleAccessToken | null = null;
   constructor(
-    private streamURL: string,
     public streamID: StreamID,
+    streamURL: string,
     options?: {
-      streamClientToken?: StreamClientToken;
+      twizzleAccessToken?: TwizzleAccessToken;
     },
   ) {
-    this.#streamClientToken = options?.streamClientToken ?? null;
+    this.#streamURL = streamURL;
+    this.#twizzleAccessToken = options?.twizzleAccessToken ?? null;
   }
 
   permittedToSend(): boolean {
-    return !!this.#streamClientToken;
+    return !!this.#twizzleAccessToken;
   }
 
   connected(): boolean {
@@ -29,10 +32,14 @@ export class Stream {
   async connect(): Promise<void> {
     twizzleLog(this, "connecting", this.streamID);
     this.#webSocket ||= new Promise((resolve, reject) => {
-      const socketURL = new URL(this.streamURL);
-      if (this.#streamClientToken) {
+      console.log(this.#streamURL);
+      const socketURL = new URL(this.#streamURL);
+      if (this.#twizzleAccessToken) {
         // TODO: avoid including this in the URL?
-        socketURL.searchParams.set("token", this.#streamClientToken);
+        socketURL.searchParams.set(
+          "twizzleAccessToken",
+          this.#twizzleAccessToken,
+        );
       }
       const webSocket = new WebSocket(
         socketURL.toString(),

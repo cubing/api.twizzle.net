@@ -10,7 +10,7 @@ import {
   newTwizzleUserID,
 } from "./identifiers.ts";
 
-class TwizzleUser {
+export class TwizzleUser {
   id: TwizzleUserID = newTwizzleUserID();
   // TODO: multiple tokens?
   twizzleAccessToken = newTwizzleAccessToken(); // TODO: hash?

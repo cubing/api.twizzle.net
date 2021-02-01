@@ -19,7 +19,10 @@ const client = new TwizzleAPIClient("http://127.0.0.1", localStorage);
     window.history.pushState({}, "", url);
   }
 
-  console.log(await client.createStream());
+  console.log(await client.streams());
+
+  const sendingStream = await client.createStream();
+  console.log(sendingStream);
 
   //   // // const streams = await client.streams();
   //   // // console.log(streams);
@@ -34,10 +37,11 @@ const client = new TwizzleAPIClient("http://127.0.0.1", localStorage);
   //   // console.log(listeningStream);
   //   // await listeningStream.connect();
 
-  //   // sendingStream.sendMove({
-  //   //   timestamp: 1,
-  //   //   move: BareBlockMove("R"),
-  //   // });
+  await sendingStream.connect();
+  sendingStream.sendMove({
+    timestamp: 1,
+    move: BareBlockMove("R"),
+  });
 
   //   // console.log("indexing!");
 })();

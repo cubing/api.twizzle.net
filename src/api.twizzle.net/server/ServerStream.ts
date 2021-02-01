@@ -1,14 +1,10 @@
 import { WebSocket } from "https://deno.land/std@0.85.0/ws/mod.ts";
-import { Server } from "https://deno.land/std@0.85.0/http/server.ts";
 import { twizzleError, twizzleLog } from "../common/log.ts";
-import { ClientID, StreamClientToken, StreamID } from "../common/stream.ts";
-import {
-  newClientID,
-  newStreamClientToken,
-  newStreamID,
-} from "./identifiers.ts";
+import { ClientID, StreamID } from "../common/stream.ts";
+import { newClientID, newStreamID } from "./identifiers.ts";
+import { TwizzleUser } from "./TwizzleUsers.ts";
 
-const STREAM_TIMEOUT_MS = 1000; //10 * 60 * 1000;
+const STREAM_TIMEOUT_MS = 2000; //10 * 60 * 1000;
 
 class ServerStreamClient {
   clientID: ClientID = newClientID();
@@ -26,24 +22,28 @@ class ServerStreamClient {
 }
 
 export class ServerStream {
+  permittedSenders: Set<TwizzleUser> = new Set<TwizzleUser>();
   clients: Set<ServerStreamClient> = new Set<ServerStreamClient>();
 
   public streamID: StreamID = newStreamID();
-  streamClientToken: StreamClientToken = newStreamClientToken();
+  // streamClientToken: StreamClientToken = newStreamClientToken();
 
   #pendingTerminationTimeoutID: number | null = null;
   #terminated = false;
 
   constructor(
     private streamTerminatedCallback: (stream: ServerStream) => void,
+    initialPermittedSenders: TwizzleUser[],
   ) {
+    for (const sender of initialPermittedSenders) {
+      this.permittedSenders.add(sender);
+    }
+    this.startTerminationTimeout(); // TODO: handle no one ever connecting
   }
 
   addClient(
     webSocket: WebSocket,
-    options?: {
-      streamClientToken?: StreamClientToken | null;
-    },
+    maybeUser: TwizzleUser | null,
   ): void {
     if (this.#terminated) {
       twizzleError(
@@ -53,12 +53,17 @@ export class ServerStream {
       );
     }
 
-    const clientIsPermittedToSend =
-      options?.streamClientToken === this.streamClientToken;
+    const clientIsPermittedToSend = !!(maybeUser &&
+      this.permittedSenders.has(maybeUser));
+    console.log(
+      this.permittedSenders.size,
+      maybeUser?.id,
+      clientIsPermittedToSend,
+    );
     const client = new ServerStreamClient(webSocket, clientIsPermittedToSend);
     this.clients.add(client);
     if (clientIsPermittedToSend) {
-      this.#pendingTerminationTimeoutID = null;
+      this.clearPendingTimeout();
     }
 
     (async () => {
@@ -66,8 +71,8 @@ export class ServerStream {
         if (!clientIsPermittedToSend) {
           twizzleLog(
             this,
-            "received message from client who is not permitted to send",
-            client,
+            "received message from client who is not permitted to send:",
+            client.clientID,
           );
           this.removeClient(client);
           return;
@@ -93,6 +98,7 @@ export class ServerStream {
   clearPendingTimeout(): void {
     if (this.#pendingTerminationTimeoutID !== null) {
       clearTimeout(this.#pendingTerminationTimeoutID);
+      this.#pendingTerminationTimeoutID = null;
     }
   }
 
@@ -114,6 +120,14 @@ export class ServerStream {
     this.streamTerminatedCallback(this);
   }
 
+  startTerminationTimeout(): void {
+    this.clearPendingTimeout();
+    this.#pendingTerminationTimeoutID = setTimeout(
+      this.terminationTimeout.bind(this),
+      STREAM_TIMEOUT_MS,
+    );
+  }
+
   terminationTimeout() {
     twizzleLog(this, "timed out, terminating", this.streamID);
     if (this.numSendingClients() !== 0) {
@@ -127,7 +141,13 @@ export class ServerStream {
   }
 
   removeClient(client: ServerStreamClient): void {
-    twizzleLog(this, "removing client", client.clientID);
+    twizzleLog(
+      this,
+      "removing client",
+      client.clientID,
+      "for stream",
+      this.streamID,
+    );
     client.closeIfNotYetClosed();
     this.clients.delete(client);
 
@@ -135,17 +155,10 @@ export class ServerStream {
       twizzleLog(
         this,
         "0 sending clients remaining. Setting termination timeout",
+        this.streamID,
       );
-      this.clearPendingTimeout();
-      this.#pendingTerminationTimeoutID = setTimeout(
-        this.terminationTimeout.bind(this),
-        STREAM_TIMEOUT_MS,
-      );
+      this.startTerminationTimeout();
     }
-  }
-
-  isValidToken(streamClientToken: StreamClientToken): boolean {
-    return streamClientToken === this.streamClientToken;
   }
 
   broadcast(message: string) {

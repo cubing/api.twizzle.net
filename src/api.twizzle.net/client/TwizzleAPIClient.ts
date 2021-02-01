@@ -40,16 +40,26 @@ export class TwizzleAPIClient {
   }
 
   async createStream(): Promise<Stream> {
+    const url = new URL(mainAPIURL(this.baseOrigin, "/v0/streams"));
+    const twizzleAccessToken = this.twizzleAccessToken();
+    if (twizzleAccessToken) {
+      // TODO: avoid including this in the URL?
+      url.searchParams.set(
+        "twizzleAccessToken",
+        twizzleAccessToken,
+      );
+    }
+
     const response: StreamsPOSTResponse = await (
-      await fetch(mainAPIURL(this.baseOrigin, "/v0/streams"), {
+      await fetch(url, {
         method: "POST",
       })
     ).json();
     return new Stream(
-      streamAPIURL(this.baseOrigin, `/v0/streams/${response.streamID}/socket`),
       response.streamID,
+      streamAPIURL(this.baseOrigin, `/v0/streams/${response.streamID}/socket`),
       {
-        streamClientToken: response.streamClientToken,
+        twizzleAccessToken: this.twizzleAccessToken() ?? undefined,
       },
     );
   }
@@ -60,17 +70,30 @@ export class TwizzleAPIClient {
     return response.streams.map(
       (streamInfo: StreamInfo) =>
         new Stream(
+          streamInfo.streamID,
           streamAPIURL(
             this.baseOrigin,
             `/v0/streams/${streamInfo.streamID}/socket`,
           ),
-          streamInfo.streamID,
         ),
     );
   }
 
   wcaAuthURL(): string {
     return wcaOAuthStartURL();
+  }
+
+  twizzleAccessToken(): TwizzleAccessToken | null {
+    const token = this.storage["twizzleAccessToken"];
+    if (
+      !token ||
+      !token.startsWith(
+        "twizzle_access_token_",
+      )
+    ) {
+      return null;
+    }
+    return token;
   }
 
   authenticated(): boolean {
