@@ -75,7 +75,7 @@ export class TwizzleAPIServer {
           });
         }
       } catch (e) {
-        twizzleLog(this, "server error", e, request);
+        twizzleLog(this, "server error", e);
         request.respond({
           status: 500,
           headers,

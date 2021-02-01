@@ -10,6 +10,28 @@ import {
   newTwizzleUserID,
 } from "./identifiers.ts";
 
+// import googleCloudDatastore from "https://cdn.skypack.dev/@google-cloud/datastore";
+import Storage from "../vendor/Storage.js";
+
+class StorageBackedMap<K extends string, V> {
+  storage: Storage;
+  constructor(path: string) {
+    this.storage = new Storage(path);
+  }
+
+  set(key: K, value: V): void {
+    this.storage.setItem(key, JSON.stringify(value));
+  }
+
+  get(key: K): V {
+    return JSON.parse(this.storage.getItem(key)) as V;
+  }
+
+  delete(key: K): void {
+    this.storage.removeItem(key);
+  }
+}
+
 export class TwizzleUser {
   id: TwizzleUserID = newTwizzleUserID();
   // TODO: multiple tokens?
@@ -18,18 +40,20 @@ export class TwizzleUser {
 }
 
 export class TwizzleUsers {
-  users: Map<TwizzleUserID, TwizzleUser> = new Map<
+  users: StorageBackedMap<TwizzleUserID, TwizzleUser> = new StorageBackedMap<
     TwizzleUserID,
     TwizzleUser
-  >();
-  tokenToUser: Map<TwizzleAccessToken, TwizzleUser> = new Map<
-    TwizzleAccessToken,
-    TwizzleUser
-  >();
-  availableClaims: Map<ClaimToken, TwizzleUser> = new Map<
-    ClaimToken,
-    TwizzleUser
-  >();
+  >("./data/users.json");
+  tokenToUser: StorageBackedMap<TwizzleAccessToken, TwizzleUser> =
+    new StorageBackedMap<
+      TwizzleAccessToken,
+      TwizzleUser
+    >("./data/tokenToUser.json");
+  availableClaims: StorageBackedMap<ClaimToken, TwizzleUser> =
+    new StorageBackedMap<
+      ClaimToken,
+      TwizzleUser
+    >("./data/availableClaims.json");
 
   addWCAUser(wcaAccountInfo: WCAAccountInfo): TwizzleUser {
     const user = new TwizzleUser(wcaAccountInfo);
