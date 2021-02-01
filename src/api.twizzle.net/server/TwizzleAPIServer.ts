@@ -14,12 +14,16 @@ import {
   StreamsGETResponse,
   StreamsPOSTResponse,
 } from "../common/stream.ts";
+import { WCAAccountID, WCAAccountInfo, wcaGetToken } from "../common/wca.ts";
+import { TWIZZLE_WCA_APPLICATION_CLIENT_SECRET } from "./config.ts";
 import { ServerStream } from "./ServerStream.ts";
+import { TwizzleUsers } from "./TwizzleUsers.ts";
 
 export const REST_SERVER_PORT = 4444;
 export const STREAM_SERVER_PORT = 4445;
 
 export class TwizzleAPIServer {
+  users: TwizzleUsers = new TwizzleUsers();
   streams: Map<StreamID, ServerStream> = new Map<StreamID, ServerStream>();
 
   restServer: Server;
@@ -34,20 +38,26 @@ export class TwizzleAPIServer {
       const headers = new Headers({ "Access-Control-Allow-Origin": "*" });
       twizzleLog(this, "request for:", request.method, request.url);
       try {
-        const path = new URL(request.url, "https://localhost");
-        const pathParts = path.pathname.split("/").slice(1);
+        const path = new URL(request.url, "https://localhost").pathname;
+        const pathParts = path.split("/").slice(1);
         if (request.method === "OPTIONS" && request.url === "/v0/streams") {
           request.respond({
             status: 200,
             headers,
           });
         }
-        if (request.method === "GET" && request.url === "/v0/streams") {
+        if (request.method === "GET" && path === "/v0/streams") {
           this.getStreams(request, headers);
-        } else if (request.method === "POST" && request.url === "/v0/streams") {
+        } else if (
+          request.method === "GET" && path === "/v0/auth/wca"
+        ) {
+          this.authWCA(request, headers);
+        } else if (
+          request.method === "POST" && path === "/v0/streams"
+        ) {
           this.postStreams(request, headers);
         } else if (
-          request.method === "GET" && request.url.startsWith("/v0/streams/") &&
+          request.method === "GET" && path.startsWith("/v0/streams/") &&
           pathParts.length === 4 && pathParts[3] === "socket" &&
           acceptable(request)
         ) {
@@ -145,5 +155,27 @@ export class TwizzleAPIServer {
 
   streamTerminated(stream: ServerStream): void {
     this.streams.delete(stream.streamID);
+  }
+
+  async authWCA(request: ServerRequest, headers: Headers): Promise<void> {
+    const code = new URL(request.url, "https://localhost").searchParams.get(
+      "code",
+    );
+
+    if (!code) {
+      twizzleLog(this, "failed auth");
+      request.respond({
+        status: 400,
+        headers,
+        body: "code was not provided",
+      });
+      return;
+    }
+
+    const accountInfo = await wcaGetToken(
+      code,
+      TWIZZLE_WCA_APPLICATION_CLIENT_SECRET,
+    );
+    this.users.addWCAUser(accountInfo);
   }
 }

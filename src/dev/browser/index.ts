@@ -6,6 +6,11 @@ const client = new TwizzleAPIClient("http://127.0.0.1");
 (window as any).client = client;
 
 (async () => {
+  const a = document.createElement("a");
+  a.href = client.authURL();
+  a.textContent = "Log in with your WCA account";
+  document.body.appendChild(a);
+
   // const streams = await client.streams();
   // console.log(streams);
   // const stream = streams[0];

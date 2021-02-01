@@ -4,6 +4,7 @@ import {
   StreamsGETResponse,
   StreamsPOSTResponse,
 } from "../common/stream.ts";
+import { wcaOAuthStartURL } from "../common/wca.ts";
 import { Stream } from "./Stream.ts";
 
 const mainPort = 4444;
@@ -62,5 +63,9 @@ export class TwizzleAPIClient {
           streamInfo.streamID,
         ),
     );
+  }
+
+  authURL(): string {
+    return wcaOAuthStartURL();
   }
 }
