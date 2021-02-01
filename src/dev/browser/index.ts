@@ -19,10 +19,15 @@ const client = new TwizzleAPIClient("http://127.0.0.1", localStorage);
     window.history.pushState({}, "", url);
   }
 
-  console.log(await client.streams());
-
   const sendingStream = await client.createStream();
   console.log(sendingStream);
+
+  const streams = await client.streams();
+  console.log(streams);
+  for (const stream of streams) {
+    document.body.appendChild(document.createElement("div")).textContent =
+      stream.streamInfo.senders[0].name;
+  }
 
   //   // // const streams = await client.streams();
   //   // // console.log(streams);
