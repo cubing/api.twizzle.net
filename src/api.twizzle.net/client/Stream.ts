@@ -1,20 +1,22 @@
 // import { WebSocket } from "https://deno.land/x/websocket@v0.0.5/mod.ts";
 import { TwizzleAccessToken } from "../common/auth.ts";
 import { twizzleLog } from "../common/log.ts";
-import { StreamClientToken, StreamID } from "../common/stream.ts";
+import { StreamClientToken, StreamID, StreamInfo } from "../common/stream.ts";
 
 export class Stream {
+  public streamID: StreamID;
   #streamURL: string;
   #webSocket: Promise<WebSocket> | null = null;
   #connnected = false;
   #twizzleAccessToken: TwizzleAccessToken | null = null;
   constructor(
-    public streamID: StreamID,
+    public streamInfo: StreamInfo,
     streamURL: string,
     options?: {
       twizzleAccessToken?: TwizzleAccessToken;
     },
   ) {
+    this.streamID = streamInfo.streamID;
     this.#streamURL = streamURL;
     this.#twizzleAccessToken = options?.twizzleAccessToken ?? null;
   }

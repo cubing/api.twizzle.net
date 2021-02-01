@@ -77,12 +77,12 @@ export async function wcaGetToken(
   console.log(wcaAuthInfo);
 
   const wcaUserInfo: WCAUserInfo =
-    await (await fetch("https://www.worldcubeassociation.org/api/v0/me", {
+    (await (await fetch("https://www.worldcubeassociation.org/api/v0/me", {
       headers: {
         "Authorization":
           `${wcaAuthInfo.token_type} ${wcaAuthInfo.access_token}`,
       },
-    })).json();
+    })).json()).me;
 
   console.log(wcaUserInfo);
 

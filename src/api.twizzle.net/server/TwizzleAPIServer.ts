@@ -41,12 +41,12 @@ export class TwizzleAPIServer {
       try {
         const path = new URL(request.url, "https://localhost").pathname;
         const pathParts = path.split("/").slice(1);
-        if (request.method === "OPTIONS" && request.url === "/v0/streams") {
-          request.respond({
-            status: 200,
-            headers,
-          });
-        }
+        // if (request.method === "OPTIONS" && request.url === "/v0/streams") {
+        //   request.respond({
+        //     status: 200,
+        //     headers,
+        //   });
+        // }
         if (request.method === "GET" && path === "/v0/streams") {
           this.getStreams(request, headers);
         } else if (
@@ -155,8 +155,11 @@ export class TwizzleAPIServer {
 
   getStreams(request: ServerRequest, headers: Headers): void {
     const response: StreamsGETResponse = {
-      streams: Array.from(this.streams.values()),
+      streams: Array.from(this.streams.values()).map((stream) =>
+        stream.toJSON()
+      ),
     };
+    console.log({ response });
     request.respond({
       status: 200,
       body: JSON.stringify(response),
@@ -172,7 +175,7 @@ export class TwizzleAPIServer {
 
     const stream: ServerStream = this.newStream(user);
     const response: StreamsPOSTResponse = {
-      streamID: stream.streamID,
+      stream: stream.toJSON(),
     };
     request.respond({
       status: 200,

@@ -1,6 +1,6 @@
 import { WebSocket } from "https://deno.land/std@0.85.0/ws/mod.ts";
 import { twizzleError, twizzleLog } from "../common/log.ts";
-import { ClientID, StreamID } from "../common/stream.ts";
+import { ClientID, StreamID, StreamInfo } from "../common/stream.ts";
 import { newClientID, newStreamID } from "./identifiers.ts";
 import { TwizzleUser } from "./TwizzleUsers.ts";
 
@@ -39,6 +39,21 @@ export class ServerStream {
       this.permittedSenders.add(sender);
     }
     this.startTerminationTimeout(); // TODO: handle no one ever connecting
+  }
+
+  toJSON(): StreamInfo {
+    const senders = Array.from(this.permittedSenders.values()).map(
+      (user: TwizzleUser) => ({
+        twizzleUserID: user.id,
+        wcaID: user.wcaAccountInfo.wcaUserInfo.wca_id,
+        name: user.wcaAccountInfo.wcaUserInfo.name,
+      }),
+    );
+    console.log({ senders }, Array.from(this.permittedSenders.values())[0]);
+    return {
+      streamID: this.streamID,
+      senders,
+    };
   }
 
   addClient(

@@ -56,8 +56,11 @@ export class TwizzleAPIClient {
       })
     ).json();
     return new Stream(
-      response.streamID,
-      streamAPIURL(this.baseOrigin, `/v0/streams/${response.streamID}/socket`),
+      response.stream,
+      streamAPIURL(
+        this.baseOrigin,
+        `/v0/streams/${response.stream.streamID}/socket`,
+      ),
       {
         twizzleAccessToken: this.twizzleAccessToken() ?? undefined,
       },
@@ -70,7 +73,7 @@ export class TwizzleAPIClient {
     return response.streams.map(
       (streamInfo: StreamInfo) =>
         new Stream(
-          streamInfo.streamID,
+          streamInfo,
           streamAPIURL(
             this.baseOrigin,
             `/v0/streams/${streamInfo.streamID}/socket`,
