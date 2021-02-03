@@ -1,4 +1,5 @@
 import { WebSocket } from "https://deno.land/std@0.85.0/ws/mod.ts";
+import { TwizzleUserID } from "../common/auth.ts";
 import { twizzleError, twizzleLog } from "../common/log.ts";
 import { ClientID, StreamID, StreamInfo } from "../common/stream.ts";
 import { newClientID, newStreamID } from "./identifiers.ts";
@@ -22,7 +23,7 @@ class ServerStreamClient {
 }
 
 export class ServerStream {
-  permittedSenders: Set<TwizzleUser> = new Set<TwizzleUser>();
+  permittedSenders: Set<TwizzleUserID> = new Set<TwizzleUserID>();
   clients: Set<ServerStreamClient> = new Set<ServerStreamClient>();
 
   public streamID: StreamID = newStreamID();
@@ -36,19 +37,25 @@ export class ServerStream {
     initialPermittedSenders: TwizzleUser[],
   ) {
     for (const sender of initialPermittedSenders) {
-      this.permittedSenders.add(sender);
+      this.permittedSenders.add(sender.id);
     }
+    console.log(
+      "initial permitted senders",
+      this.streamID,
+      Array.from(this.permittedSenders.values()),
+    );
     this.startTerminationTimeout(); // TODO: handle no one ever connecting
   }
 
   toJSON(): StreamInfo {
-    const senders = Array.from(this.permittedSenders.values()).map(
-      (user: TwizzleUser) => ({
-        twizzleUserID: user.id,
-        wcaID: user.wcaAccountInfo.wcaUserInfo.wca_id,
-        name: user.wcaAccountInfo.wcaUserInfo.name,
-      }),
-    );
+    // TODO: user lookup
+    // .map(
+    //   (user: TwizzleUser) => ({
+    //     twizzleUserID: user.id,
+    //     wcaID: user.wcaAccountInfo.wcaUserInfo.wca_id,
+    //     name: user.wcaAccountInfo.wcaUserInfo.name,
+    //   }
+    const senders = Array.from(this.permittedSenders.values());
     console.log({ senders }, Array.from(this.permittedSenders.values())[0]);
     return {
       streamID: this.streamID,
@@ -69,7 +76,7 @@ export class ServerStream {
     }
 
     const clientIsPermittedToSend = !!(maybeUser &&
-      this.permittedSenders.has(maybeUser));
+      this.permittedSenders.has(maybeUser.id));
     console.log(
       this.permittedSenders.size,
       maybeUser?.id,
@@ -105,6 +112,7 @@ export class ServerStream {
           this.broadcast(message);
         }
       }
+      console.log("donneaAA?A?", client.clientID);
       this.removeClient(client);
     })();
   }

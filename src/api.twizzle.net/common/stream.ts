@@ -8,11 +8,12 @@ export type StreamClientToken = string;
 
 export interface StreamInfo {
   streamID: StreamID;
-  senders: {
-    twizzleUserID: string;
-    wcaID: string | null;
-    name: string;
-  }[];
+  senders: TwizzleUserID[];
+  // {
+  //   twizzleUserID: string;
+  //   wcaID: string | null;
+  //   name: string;
+  // }
 }
 
 export interface StreamsGETResponse {

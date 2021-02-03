@@ -18,13 +18,20 @@ import {
 import { wcaGetToken } from "../common/wca.ts";
 import { TWIZZLE_WCA_APPLICATION_CLIENT_SECRET } from "./config.ts";
 import { ServerStream } from "./ServerStream.ts";
-import { TwizzleUser, TwizzleUsers } from "./TwizzleUsers.ts";
+import {
+  addWCAUser,
+  claim,
+  createClaimToken,
+  tokenToUser,
+  TwizzleUser,
+} from "./TwizzleUsers.ts";
 
 export const REST_SERVER_PORT = 4444;
 export const STREAM_SERVER_PORT = 4445;
 
 export class TwizzleAPIServer {
-  users: TwizzleUsers = new TwizzleUsers();
+  // TODO: persist streams?
+  // TODO: store stream metada in DB?
   streams: Map<StreamID, ServerStream> = new Map<StreamID, ServerStream>();
 
   restServer: Server;
@@ -97,12 +104,13 @@ export class TwizzleAPIServer {
       "twizzleAccessToken",
     );
 
+    console.log("Sdfdsfsdf", request.url);
+
     if (!maybeTwizzleAccessToken) {
       return { haltNow: false, user: null };
     }
 
-    const maybeUser = this.users.tokenToUser.get(maybeTwizzleAccessToken) ??
-      null;
+    const maybeUser = tokenToUser(maybeTwizzleAccessToken);
     if (!maybeUser) {
       twizzleLog(this, "invalid twizzle access token");
       request.respond({
@@ -112,6 +120,8 @@ export class TwizzleAPIServer {
       });
       return { haltNow: true, user: null };
     }
+
+    console.log("maybaybaybyabyaya", maybeUser.id);
 
     return { haltNow: false, user: maybeUser };
   }
@@ -150,7 +160,7 @@ export class TwizzleAPIServer {
       headers: request.headers,
     }));
 
-    stream.addClient(webSocket, user);
+    stream.addClient(webSocket, user); // TODO: handle error?
   }
 
   getStreams(request: ServerRequest, headers: Headers): void {
@@ -185,11 +195,12 @@ export class TwizzleAPIServer {
   }
 
   newStream(user: TwizzleUser | null): ServerStream {
+    console.log("newStreammamama", user?.id);
     const stream = new ServerStream(
       this.streamTerminated.bind(this),
       user ? [user] : [],
     );
-    console.log("SDfsdf", user);
+    console.log("SDfsdf", stream.streamID, user?.id);
     this.streams.set(stream.streamID, stream);
     return stream;
   }
@@ -214,7 +225,7 @@ export class TwizzleAPIServer {
       });
       return;
     }
-    const maybeUser = this.users.claim(maybeClaimToken);
+    const maybeUser = claim(maybeClaimToken);
     if (!maybeUser) {
       request.respond({
         status: 401,
@@ -255,9 +266,9 @@ export class TwizzleAPIServer {
       maybeCode,
       TWIZZLE_WCA_APPLICATION_CLIENT_SECRET,
     );
-    const user = this.users.addWCAUser(accountInfo);
+    const user = addWCAUser(accountInfo);
     const url = new URL("http://localhost:1234/"); // TODO: return_to?
-    url.searchParams.set("claimToken", this.users.createClaimToken(user));
+    url.searchParams.set("claimToken", createClaimToken(user));
     request.respond({
       status: 302,
       headers: new Headers({
