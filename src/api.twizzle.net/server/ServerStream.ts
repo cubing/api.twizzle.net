@@ -3,7 +3,7 @@ import { TwizzleUserID } from "../common/auth.ts";
 import { twizzleError, twizzleLog } from "../common/log.ts";
 import { ClientID, StreamID, StreamInfo } from "../common/stream.ts";
 import { newClientID, newStreamID } from "./identifiers.ts";
-import { TwizzleUser } from "./TwizzleUsers.ts";
+import { TwizzleUser } from "./db/TwizzleUser.ts";
 
 const STREAM_TIMEOUT_MS = 2000; //10 * 60 * 1000;
 

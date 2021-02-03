@@ -18,13 +18,7 @@ import {
 import { wcaGetToken } from "../common/wca.ts";
 import { TWIZZLE_WCA_APPLICATION_CLIENT_SECRET } from "./config.ts";
 import { ServerStream } from "./ServerStream.ts";
-import {
-  addWCAUser,
-  claim,
-  createClaimToken,
-  tokenToUser,
-  TwizzleUser,
-} from "./TwizzleUsers.ts";
+import { addWCAUser, createClaimToken, TwizzleUser } from "./db/TwizzleUser.ts";
 
 export const REST_SERVER_PORT = 4444;
 export const STREAM_SERVER_PORT = 4445;
@@ -110,7 +104,9 @@ export class TwizzleAPIServer {
       return { haltNow: false, user: null };
     }
 
-    const maybeUser = tokenToUser(maybeTwizzleAccessToken);
+    const maybeUser = TwizzleUser.findByTwizzleAccessToken(
+      maybeTwizzleAccessToken,
+    );
     if (!maybeUser) {
       twizzleLog(this, "invalid twizzle access token");
       request.respond({
@@ -225,7 +221,7 @@ export class TwizzleAPIServer {
       });
       return;
     }
-    const maybeUser = claim(maybeClaimToken);
+    const maybeUser = TwizzleUser.findByClaimCoken(maybeClaimToken);
     if (!maybeUser) {
       request.respond({
         status: 401,

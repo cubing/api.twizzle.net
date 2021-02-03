@@ -12,7 +12,7 @@ import {
 
 // import googleCloudDatastore from "https://cdn.skypack.dev/@google-cloud/datastore";
 import Storage from "../../vendor/Storage.js";
-import { TwizzleUser } from "../TwizzleUsers.ts";
+import { TwizzleUser } from "./TwizzleUser.ts";
 
 class StorageBackedMap<K extends string, V> {
   storage: Storage;
