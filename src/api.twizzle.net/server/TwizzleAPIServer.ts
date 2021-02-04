@@ -15,6 +15,7 @@ import {
   StreamsGETResponse,
   StreamsPOSTResponse,
 } from "../common/stream.ts";
+import { TwizzleSessionInfo } from "../common/user.ts";
 import { wcaGetToken } from "../common/wca.ts";
 import {
   CLIENT_APP_URL,
@@ -239,12 +240,14 @@ export class TwizzleAPIServer {
       return;
     }
     twizzleLog(this, "claim token successfully used for user", maybeUser.id);
+    const twizzleSessionInfo: TwizzleSessionInfo = {
+      twizzleAccessToken: maybeUser.twizzleAccessToken,
+      userInfo: TwizzleUser.publicInfo(maybeUser.id),
+    };
     request.respond({
       status: 200,
       headers,
-      body: JSON.stringify({
-        twizzleAccessToken: maybeUser.twizzleAccessToken,
-      }),
+      body: JSON.stringify(twizzleSessionInfo),
     });
   }
 

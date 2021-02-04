@@ -1,30 +1,32 @@
 import { ClaimToken, TwizzleAccessToken } from "../common/auth.ts";
+import { prod, setProd } from "../common/config.ts";
 import { twizzleLog } from "../common/log.ts";
 import {
   StreamInfo,
   StreamsGETResponse,
   StreamsPOSTResponse,
 } from "../common/stream.ts";
+import { TwizzleSessionInfo } from "../common/user.ts";
 import { wcaOAuthStartURL } from "../common/wca.ts";
+import { StoredSessionInfo } from "./StoredSessionInfo.ts";
 import { Stream } from "./Stream.ts";
 
-const mainPort = 4444;
-const streamPort = mainPort; // TODO
+function apiOrigin(): string {
+  return prod() ? "https://api.twizzle.net/" : "http://127.0.0.1:4444";
+}
 
-function mainAPIURL(baseOrigin: string, pathname?: string): string {
-  const url = new URL(baseOrigin);
-  url.port = mainPort.toString();
+function mainAPIURL(pathname?: string): string {
+  const url = new URL(apiOrigin());
   if (pathname) {
     url.pathname = pathname;
   }
   return url.toString();
 }
 
-function streamAPIURL(baseOrigin: string, pathname?: string): string {
-  const url = new URL(baseOrigin);
+function streamAPIURL(pathname?: string): string {
+  const url = new URL(apiOrigin());
   // We'd set `url.scheme`, but `deno` doesn't support that?
-  url.protocol = "ws:";
-  url.port = streamPort.toString();
+  url.protocol = prod() ? "wss:" : "ws:";
   if (pathname) {
     url.pathname = pathname;
   }
@@ -32,52 +34,59 @@ function streamAPIURL(baseOrigin: string, pathname?: string): string {
 }
 
 export class TwizzleAPIClient {
+  storedSessionInfo: StoredSessionInfo;
   constructor(
-    private baseOrigin: string,
-    private storage: Record<string, string>,
+    storage: Record<string, string>,
   ) {
     twizzleLog(this, "starting");
+    this.storedSessionInfo = new StoredSessionInfo(storage);
   }
 
   async createStream(): Promise<Stream> {
-    const url = new URL(mainAPIURL(this.baseOrigin, "/v0/streams"));
-    const twizzleAccessToken = this.twizzleAccessToken();
+    const createURL = new URL(mainAPIURL("/v0/streams"));
+    const twizzleAccessToken = this.storedSessionInfo.twizzleAccessToken();
     if (twizzleAccessToken) {
       // TODO: avoid including this in the URL?
-      url.searchParams.set(
+      createURL.searchParams.set(
         "twizzleAccessToken",
         twizzleAccessToken,
       );
     }
 
     const response: StreamsPOSTResponse = await (
-      await fetch(url, {
+      await fetch(createURL, {
         method: "POST",
       })
     ).json();
+
+    const streamURL = new URL(streamAPIURL(
+      `/v0/streams/${response.stream.streamID}/socket`,
+    ));
+    if (twizzleAccessToken) {
+      // TODO: avoid including this in the URL?
+      streamURL.searchParams.set(
+        "twizzleAccessToken",
+        twizzleAccessToken,
+      );
+    }
     return new Stream(
       response.stream,
-      streamAPIURL(
-        this.baseOrigin,
-        `/v0/streams/${response.stream.streamID}/socket`,
-      ),
-      {
-        twizzleAccessToken: this.twizzleAccessToken() ?? undefined,
-      },
+      streamURL.toString(),
+      this.storedSessionInfo,
     );
   }
 
   async streams(): Promise<Stream[]> {
     const response: StreamsGETResponse =
-      await (await fetch(mainAPIURL(this.baseOrigin, "/v0/streams"))).json();
+      await (await fetch(mainAPIURL("/v0/streams"))).json();
     return response.streams.map(
       (streamInfo: StreamInfo) =>
         new Stream(
           streamInfo,
           streamAPIURL(
-            this.baseOrigin,
             `/v0/streams/${streamInfo.streamID}/socket`,
           ),
+          this.storedSessionInfo,
         ),
     );
   }
@@ -86,31 +95,22 @@ export class TwizzleAPIClient {
     return wcaOAuthStartURL();
   }
 
-  twizzleAccessToken(): TwizzleAccessToken | null {
-    const token = this.storage["twizzleAccessToken"];
-    if (
-      !token ||
-      !token.startsWith(
-        "twizzle_access_token_",
-      )
-    ) {
-      return null;
-    }
-    return token;
-  }
-
   authenticated(): boolean {
-    return this.storage["twizzleAccessToken"].startsWith(
+    return !!this.storedSessionInfo.twizzleAccessToken()?.startsWith(
       "twizzle_access_token_",
     );
   }
 
+  myQualifiedName(): string {
+    return this.storedSessionInfo.qualifiedName();
+  }
+
   async claim(claimToken: ClaimToken): Promise<void> {
-    const url = new URL(mainAPIURL(this.baseOrigin, "/v0/claim"));
+    const url = new URL(mainAPIURL("/v0/claim"));
     url.searchParams.set("claimToken", claimToken);
-    const twizzleAccessToken: TwizzleAccessToken =
+    const storedSessionInfo: TwizzleSessionInfo =
       (await (await fetch(url, { method: "POST" }))
-        .json()).twizzleAccessToken;
-    this.storage["twizzleAccessToken"] = twizzleAccessToken;
+        .json());
+    this.storedSessionInfo.set(storedSessionInfo);
   }
 }

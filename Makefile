@@ -13,7 +13,10 @@ dev-client:
 	npx parcel src/dev/browser/index.html
 
 .PHONY: deploy
-deploy:
+deploy: deploy-server deploy-client
+
+.PHONY: deploy-server
+deploy-server:
 	# This uploads everything every time.
 	# TODO: Figure out how to use SFTP/rsync
 	gcloud compute ssh \
@@ -28,3 +31,27 @@ deploy:
 		./Makefile \
 		./src \
 		api-twizzle-net:~/api.twizzle.net/
+
+CLIENT_SFTP_PATH = "towns.dreamhost.com:~/twizzle.net/stream/"
+CLIENT_URL       = "https://twizzle.net/stream/"
+
+.PHONY: deploy-client
+deploy-client: build-prod-client
+	rsync -avz \
+		--exclude .DS_Store \
+		--exclude .git \
+		./dist/ \
+		${CLIENT_SFTP_PATH}
+	echo "\nDone deploying. Go to ${CLIENT_URL}\n"
+
+.PHONY: build-prod-client
+build-prod-client: clean
+	env NODE_ENV=production \
+		npx parcel build \
+			--no-scope-hoist \
+			--public-url ./ \
+			src/dev/browser/index.html
+
+.PHONY: clean
+clean:
+	rm -rf .parcel-cache dist

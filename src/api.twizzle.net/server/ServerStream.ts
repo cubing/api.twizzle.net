@@ -8,7 +8,7 @@ import { TwizzleUserPublicInfo } from "../common/user.ts";
 import { BufferedLogFile } from "./BufferedLogFile.ts";
 import { ensureDir } from "https://deno.land/std@0.85.0/fs/mod.ts";
 
-const STREAM_TIMEOUT_MS = 2000; //10 * 60 * 1000;
+const STREAM_TIMEOUT_MS = 10 * 60 * 1000;
 
 ensureDir("./data/log/streams");
 
@@ -107,11 +107,18 @@ export class ServerStream {
     }
 
     (async () => {
-      for await (const message of webSocket) {
-        this.onMessage(message as string, client);
+      try {
+        for await (const message of webSocket) {
+          this.onMessage(message as string, client);
+        }
+        console.log("donneaAA?A?", client.clientID);
+        this.removeClient(client);
+      } catch (e) {
+        this.#bufferedLogFile.log({
+          event: "message-error",
+          errorMessage: e.toString(),
+        });
       }
-      console.log("donneaAA?A?", client.clientID);
-      this.removeClient(client);
     })();
   }
 

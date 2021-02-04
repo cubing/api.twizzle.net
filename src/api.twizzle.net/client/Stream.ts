@@ -1,7 +1,9 @@
 // import { WebSocket } from "https://deno.land/x/websocket@v0.0.5/mod.ts";
-import { TwizzleAccessToken } from "../common/auth.ts";
+import { TwizzleAccessToken, TwizzleUserID } from "../common/auth.ts";
 import { twizzleLog } from "../common/log.ts";
 import { StreamID, StreamInfo } from "../common/stream.ts";
+import { TwizzleSessionInfo } from "../common/user.ts";
+import { StoredSessionInfo } from "./StoredSessionInfo.ts";
 
 export interface MoveEvent {
   // deno-lint-ignore no-explicit-any
@@ -18,17 +20,15 @@ export class Stream {
   #streamURL: string;
   #webSocket: Promise<WebSocket> | null = null;
   #connnected = false;
-  #twizzleAccessToken: TwizzleAccessToken | null = null;
+  #storedSessionInfo: StoredSessionInfo;
   constructor(
     public streamInfo: StreamInfo,
     streamURL: string,
-    options?: {
-      twizzleAccessToken?: TwizzleAccessToken;
-    },
+    storedSessionInfo: StoredSessionInfo,
   ) {
     this.streamID = streamInfo.streamID;
     this.#streamURL = streamURL;
-    this.#twizzleAccessToken = options?.twizzleAccessToken ?? null;
+    this.#storedSessionInfo = storedSessionInfo;
   }
 
   addListener(listener: MoveListener): void {
@@ -40,7 +40,12 @@ export class Stream {
   }
 
   permittedToSend(): boolean {
-    return !!this.#twizzleAccessToken;
+    for (const sender of this.streamInfo.senders) {
+      if (sender.twizzleUserID === this.#storedSessionInfo.twizzleUserID()) {
+        return true;
+      }
+    }
+    return false;
   }
 
   connected(): boolean {
@@ -54,11 +59,12 @@ export class Stream {
     this.#webSocket ||= new Promise((resolve, reject) => {
       console.log(this.#streamURL);
       const socketURL = new URL(this.#streamURL);
-      if (this.#twizzleAccessToken) {
+      const twizzleAccessToken = this.#storedSessionInfo.twizzleAccessToken();
+      if (twizzleAccessToken) {
         // TODO: avoid including this in the URL?
         socketURL.searchParams.set(
           "twizzleAccessToken",
-          this.#twizzleAccessToken,
+          twizzleAccessToken,
         );
       }
       const webSocket = new WebSocket(

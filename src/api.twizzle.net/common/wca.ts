@@ -93,7 +93,7 @@ export async function wcaGetToken(
       },
     })).json()).me;
 
-  console.log(wcaUserInfo);
+  // console.log(wcaUserInfo);
 
   return { wcaAuthInfo, wcaUserInfo };
 }
