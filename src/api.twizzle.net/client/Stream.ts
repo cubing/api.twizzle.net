@@ -1,13 +1,15 @@
 // import { WebSocket } from "https://deno.land/x/websocket@v0.0.5/mod.ts";
 import { twizzleLog } from "../common/log.ts";
-import { BinaryMoveEvent } from "../common/stream.ts";
+import { BinaryMoveEvent, OrientationEvent } from "../common/stream.ts";
 import { MoveEvent, StreamID, StreamInfo } from "../common/stream.ts";
 import { StoredSessionInfo } from "./StoredSessionInfo.ts";
 
 type MoveListener = (moveEvent: MoveEvent) => void;
+type OrientationListener = (orientationEvent: OrientationEvent) => void;
 
 export class Stream {
-  #listeners: Set<MoveListener> = new Set();
+  #moveListeners: Set<MoveListener> = new Set();
+  #orientationListeners: Set<OrientationListener> = new Set();
 
   public streamID: StreamID;
   #streamURL: string;
@@ -24,12 +26,20 @@ export class Stream {
     this.#storedSessionInfo = storedSessionInfo;
   }
 
-  addListener(listener: MoveListener): void {
-    this.#listeners.add(listener);
+  addMoveListener(listener: MoveListener): void {
+    this.#moveListeners.add(listener);
   }
 
-  removeListener(listener: MoveListener): void {
-    this.#listeners.delete(listener);
+  removeMoveListener(listener: MoveListener): void {
+    this.#moveListeners.delete(listener);
+  }
+
+  addOrientationListener(listener: OrientationListener): void {
+    this.#orientationListeners.add(listener);
+  }
+
+  removeOrientationListener(listener: OrientationListener): void {
+    this.#orientationListeners.delete(listener);
   }
 
   permittedToSend(): boolean {
@@ -55,14 +65,9 @@ export class Stream {
       const twizzleAccessToken = this.#storedSessionInfo.twizzleAccessToken();
       if (twizzleAccessToken) {
         // TODO: avoid including this in the URL?
-        socketURL.searchParams.set(
-          "twizzleAccessToken",
-          twizzleAccessToken,
-        );
+        socketURL.searchParams.set("twizzleAccessToken", twizzleAccessToken);
       }
-      const webSocket = new WebSocket(
-        socketURL.toString(),
-      );
+      const webSocket = new WebSocket(socketURL.toString());
       const timeoutID = setTimeout(() => {
         if (!this.#connnected) {
           twizzleLog(this, "timeout:", this.streamID);
@@ -90,8 +95,7 @@ export class Stream {
   }
 
   // TODO: remove `any`
-  // deno-lint-ignore no-explicit-any
-  sendMoveEvent(data: BinaryMoveEvent): void {
+  sendMoveEvent(binaryMoveEvent: BinaryMoveEvent): void {
     (async () => {
       if (!this.#webSocket) {
         // TODO: write test
@@ -100,7 +104,32 @@ export class Stream {
       (await this.#webSocket).send(
         JSON.stringify({
           event: "move",
-          data,
+          data: binaryMoveEvent,
+        }),
+      );
+    })();
+  }
+
+  // TODO: remove `any`
+  sendOrientationEvent(orientationEvent: OrientationEvent): void {
+    (async () => {
+      orientationEvent.timeStamp = Math.floor(orientationEvent.timeStamp); // Reduce size on the wire.
+      orientationEvent.quaternion.x =
+        Math.floor(10000 * orientationEvent.quaternion.x) / 10000;
+      orientationEvent.quaternion.y =
+        Math.floor(10000 * orientationEvent.quaternion.y) / 10000;
+      orientationEvent.quaternion.z =
+        Math.floor(10000 * orientationEvent.quaternion.z) / 10000;
+      orientationEvent.quaternion.w =
+        Math.floor(10000 * orientationEvent.quaternion.w) / 10000;
+      if (!this.#webSocket) {
+        // TODO: write test
+        throw new Error("cannot send to stream while disconnected");
+      }
+      (await this.#webSocket).send(
+        JSON.stringify({
+          event: "orientation",
+          data: orientationEvent,
         }),
       );
     })();
@@ -108,9 +137,21 @@ export class Stream {
 
   // deno-lint-ignore no-explicit-any
   onMessage(messageEvent: MessageEvent<any>): void {
-    const message: { data: MoveEvent } = JSON.parse(messageEvent.data); // TODO: error handling
-    for (const listener of this.#listeners) {
-      listener(message.data);
+    const message: { event: "move"; data: MoveEvent } | {
+      event: "orientation";
+      data: OrientationEvent;
+    } = JSON.parse(messageEvent.data); // TODO: error handling
+    switch (message?.event) {
+      case "move":
+        for (const moveListener of this.#moveListeners) {
+          moveListener(message.data);
+        }
+        break;
+      case "orientation":
+        for (const orientationListener of this.#orientationListeners) {
+          orientationListener(message.data);
+        }
+        break;
     }
   }
 

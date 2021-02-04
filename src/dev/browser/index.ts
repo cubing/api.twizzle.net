@@ -1,8 +1,15 @@
 import { Sequence } from "cubing/alg";
-import { BluetoothPuzzle, connect, debugKeyboardConnect, MoveEvent } from "cubing/bluetooth";
+import {
+  BluetoothPuzzle,
+  connect,
+  debugKeyboardConnect,
+  MoveEvent,
+  OrientationEvent,
+} from "cubing/bluetooth";
 import { EquivalentStates, KPuzzle, KPuzzleDefinition } from "cubing/kpuzzle";
 import { cube3x3x3 } from "cubing/puzzles";
-import { TwistyPlayer } from "cubing/twisty";
+import { Twisty3DCanvas, Twisty3DPuzzle, TwistyPlayer } from "cubing/twisty";
+import { Quaternion } from "three";
 import { TwizzleAPIClient } from "../../api.twizzle.net/client/index";
 import { Stream } from "../../api.twizzle.net/client/Stream";
 import { prod, setProd } from "../../api.twizzle.net/common/config";
@@ -34,35 +41,81 @@ function resetTwistyPlayer(): void {
   twistyPlayer.experimentalSetStartStateOverride(null);
 }
 
-class ListenerMonoplexer {
-  constructor(private actualListener: (moveEvent: MoveEvent) => void) {}
-  currentMonoplexListener: (moveEvent: MoveEvent) => void = () => {};
-  newMonoplexListener(): (moveEvent: MoveEvent) => void {
-    const proxyListener = (moveEvent: MoveEvent) => {
+class ListenerMonoplexer<E> {
+  constructor(private actualListener: (e: E) => void) {}
+  currentMonoplexListener: (e: E) => void = () => {};
+  newMonoplexListener(): (e: E) => void {
+    const proxyListener = (e: E) => {
       if (proxyListener === this.currentMonoplexListener) {
-        this.actualListener(moveEvent);
+        this.actualListener(e);
       }
     };
     return this.currentMonoplexListener = proxyListener;
   }
 }
-const playerMonoplexer = new ListenerMonoplexer((moveEvent: MoveEvent) => {
-  twistyPlayer.experimentalAddMove(moveEvent.latestMove);
-});
-let currentStream: Stream | null = null
-const streamMonoplexer = new ListenerMonoplexer((moveEvent: MoveEvent) => {
-  currentStream?.sendMoveEvent(mutateToBinary(moveEvent));
- });
+
+let trackingOrientation = false;
+function resetCamera(options?: { resetToNonTracking: boolean }): void {
+  if (trackingOrientation && !options?.resetToNonTracking) {
+    (twistyPlayer
+      .viewerElems[0] as Twisty3DCanvas).camera.position.set(0, 4, 5);
+  } else {
+    trackingOrientation = false;
+    (twistyPlayer
+      .viewerElems[0] as Twisty3DCanvas).camera.position.set(3, 4, 5);
+  }
+  (twistyPlayer
+    .viewerElems[0] as Twisty3DCanvas).camera.lookAt(0, 0, 0);
+}
+function setOrientation(orientationEvent: OrientationEvent) {
+  console.log("setori");
+  if (!trackingOrientation) {
+    // First orientation event.
+    trackingOrientation = true;
+    resetCamera();
+  }
+  twistyPlayer.scene.twisty3Ds.forEach(
+    (twisty3DPuzzle: Twisty3DPuzzle) => {
+      twisty3DPuzzle.quaternion.copy(orientationEvent.quaternion as Quaternion); // TODO
+    },
+  );
+  // TODO: expose a way to scheduler renders on objects.
+  (twistyPlayer.timeline as any).dispatchTimestamp(); // TODO
+}
+
+const playerMoveMonoplexer = new ListenerMonoplexer<MoveEvent>(
+  (moveEvent: MoveEvent) => {
+    twistyPlayer.experimentalAddMove(moveEvent.latestMove);
+  },
+);
+const playerOriMonoplexer = new ListenerMonoplexer<OrientationEvent>(
+  (orientationEvent: OrientationEvent) => {
+    setOrientation(orientationEvent);
+  },
+);
+let currentStream: Stream | null = null;
+const streamMoveMonoplexer = new ListenerMonoplexer<MoveEvent>(
+  (moveEvent: MoveEvent) => {
+    currentStream?.sendMoveEvent(mutateToBinary(moveEvent));
+  },
+);
+const streamOriMonoplexer = new ListenerMonoplexer<OrientationEvent>(
+  (orientationEvent: OrientationEvent) => {
+    currentStream?.sendOrientationEvent(orientationEvent);
+  },
+);
 
 function sameStates(
   def: KPuzzleDefinition,
   twistyPlayer: TwistyPlayer,
   moveEvent: MoveEvent,
 ): boolean {
+  // deno-lint-ignore no-explicit-any
   const indexer = (twistyPlayer.cursor as any).todoIndexer; // TODO: unhackify
   const playerState = indexer
     .stateAtIndex(
       indexer.numMoves() + 1,
+      // deno-lint-ignore no-explicit-any
       (twistyPlayer.cursor as any).startState, // TODO: unhackify
     );
 
@@ -134,9 +187,15 @@ const defPromise = cube3x3x3.def();
           await stream.connect();
           resetTwistyPlayer();
           let firstEvent = true;
-          const playerMonoplexListener = playerMonoplexer.newMonoplexListener();
-          stream.addListener((binaryMoveEvent: BinaryMoveEvent) => {
-            if (playerMonoplexer.currentMonoplexListener !== playerMonoplexListener) {
+          const playerMoveMonoplexListener = playerMoveMonoplexer
+            .newMonoplexListener();
+          const playerOriMonoplexListener = playerOriMonoplexer
+            .newMonoplexListener();
+          stream.addMoveListener((binaryMoveEvent: BinaryMoveEvent) => {
+            if (
+              playerMoveMonoplexer.currentMonoplexListener !==
+                playerMoveMonoplexListener
+            ) {
               return;
             }
 
@@ -145,21 +204,26 @@ const defPromise = cube3x3x3.def();
               twistyPlayer.experimentalSetStartStateOverride(moveEvent.state);
               firstEvent = false;
             } else {
-              playerMonoplexListener(moveEvent);
+              playerMoveMonoplexListener(moveEvent);
               if (!sameStates(def, twistyPlayer, moveEvent)) {
                 twistyPlayer.alg = new Sequence([]);
                 twistyPlayer.experimentalSetStartStateOverride(moveEvent.state);
               }
             }
           });
+          stream.addOrientationListener(
+            (orientationEvent: OrientationEvent) => {
+              playerOriMonoplexListener(orientationEvent);
+            },
+          );
         }
       });
     }
     const connectKeyboardButton = connectElem.appendChild(
-      document.createElement("button")
+      document.createElement("button"),
     );
     const connectSmartPuzzleButton = connectElem.appendChild(
-      document.createElement("button")
+      document.createElement("button"),
     );
     connectKeyboardButton.textContent = "Connect keyboard";
     connectKeyboardButton.addEventListener("click", async () => {
@@ -175,8 +239,9 @@ const defPromise = cube3x3x3.def();
       }
       connectKeyboardButton.textContent = "✅ Connected keyboard!";
       connectSmartPuzzleButton.textContent = "Connect smart cube";
-      puzzle.addMoveListener(playerMonoplexer.newMonoplexListener());
-      puzzle.addMoveListener(streamMonoplexer.newMonoplexListener());
+      puzzle.addMoveListener(playerMoveMonoplexer.newMonoplexListener());
+      puzzle.addMoveListener(streamMoveMonoplexer.newMonoplexListener());
+      resetCamera({ resetToNonTracking: true });
     });
     connectSmartPuzzleButton.textContent = "Connect smart cube";
     connectSmartPuzzleButton.addEventListener("click", async () => {
@@ -185,20 +250,31 @@ const defPromise = cube3x3x3.def();
       try {
         puzzle = await connect(); // TODO: disconnect
       } catch (e) {
-        connectSmartPuzzleButton.textContent = "❌ Could not connect to smart cube";
+        connectSmartPuzzleButton.textContent =
+          "❌ Could not connect to smart cube";
         console.error(e);
         return;
       }
       connectSmartPuzzleButton.textContent = "✅ Connected to smart cube";
       connectKeyboardButton.textContent = "Connect keyboard";
       const smartCubeKPuzzle = new KPuzzle(def);
-      const playerMonoplexListener = playerMonoplexer.newMonoplexListener();
-      const streamMonoplexListener = streamMonoplexer.newMonoplexListener();
+      const playerMoveMonoplexListener = playerMoveMonoplexer
+        .newMonoplexListener();
+      const streamMoveMonoplexListener = streamMoveMonoplexer
+        .newMonoplexListener();
       puzzle.addMoveListener((moveEvent: MoveEvent) => {
         smartCubeKPuzzle.applyBlockMove(moveEvent.latestMove);
         moveEvent.state = smartCubeKPuzzle.state;
-        playerMonoplexListener(moveEvent);
-        streamMonoplexListener(moveEvent);
+        playerMoveMonoplexListener(moveEvent);
+        streamMoveMonoplexListener(moveEvent);
+      });
+      const playerOriMonoplexListener = playerOriMonoplexer
+        .newMonoplexListener();
+      const streamOriMonoplexListener = streamOriMonoplexer
+        .newMonoplexListener();
+      puzzle.addOrientationListener((orientationEvent: OrientationEvent) => {
+        playerOriMonoplexListener(orientationEvent);
+        streamOriMonoplexListener(orientationEvent);
       });
     });
     if (client.authenticated()) {

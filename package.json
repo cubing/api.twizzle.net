@@ -5,7 +5,8 @@
   "author": "Lucas Garron <code@garron.net>",
   "license": "GPL-3.0-or-later",
   "dependencies": {
-    "cubing": "^0.15.3"
+    "cubing": "^0.15.3",
+    "three": "^0.118.3"
   },
   "babel": {
     "presets": [
