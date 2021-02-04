@@ -98,8 +98,8 @@ twisty-player {
 
 @media (max-width: 640px) and (min-height: 640px), (orientation: portrait) {
   body {
-    grid-template: "viewer" "controls";
-    grid-template-rows: 2fr 1fr;
+    grid-template: "controls" "viewer";
+    grid-template-rows: 1fr 2fr;
   }
 
   #controls {
