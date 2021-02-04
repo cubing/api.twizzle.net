@@ -88,31 +88,35 @@ export class ServerStream {
 
     (async () => {
       for await (const message of webSocket) {
-        if (!clientIsPermittedToSend) {
-          twizzleLog(
-            this,
-            "received message from client who is not permitted to send:",
-            client.clientID,
-          );
-          this.removeClient(client);
-          return;
-        } else {
-          // TODO: process
-          if (typeof message !== "string") {
-            twizzleLog(
-              this,
-              "error: received non-string web socket message from",
-              client.clientID,
-            );
-            continue;
-          }
-          twizzleLog(this, "received move", message);
-          this.broadcast(message);
-        }
+        this.onMessage(message as string, client);
       }
       console.log("donneaAA?A?", client.clientID);
       this.removeClient(client);
     })();
+  }
+
+  onMessage(message: string, client: ServerStreamClient): void {
+    if (!client.clientIsPermittedToSend) {
+      twizzleLog(
+        this,
+        "received message from client who is not permitted to send:",
+        client.clientID,
+      );
+      this.removeClient(client);
+      return;
+    } else {
+      // TODO: process
+      if (typeof message !== "string") {
+        twizzleLog(
+          this,
+          "error: received non-string web socket message from",
+          client.clientID,
+        );
+        return;
+      }
+      twizzleLog(this, "received move", message);
+      this.broadcast(message);
+    }
   }
 
   // idempotent
