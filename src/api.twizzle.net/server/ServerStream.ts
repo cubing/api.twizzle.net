@@ -7,6 +7,7 @@ import { TwizzleUser } from "./db/TwizzleUser.ts";
 import { TwizzleUserPublicInfo } from "../common/user.ts";
 import { BufferedLogFile } from "./BufferedLogFile.ts";
 import { ensureDir } from "https://deno.land/std@0.85.0/fs/mod.ts";
+import { MoveEvent } from "../client/Stream.ts";
 
 const STREAM_TIMEOUT_MS = 10 * 60 * 1000;
 
@@ -40,6 +41,8 @@ export class ServerStream {
   #bufferedLogFile = new BufferedLogFile(
     `./data/log/streams/${this.streamID}.log`,
   );
+
+  #lastMessage: MessageEvent<MoveEvent> | null = null;
 
   constructor(
     private streamTerminatedCallback: (stream: ServerStream) => void,
@@ -104,6 +107,10 @@ export class ServerStream {
     });
     if (clientIsPermittedToSend) {
       this.clearPendingTimeout();
+    } else {
+      if (this.#lastMessage) {
+        this.sendToClient(client, this.#lastMessage);
+      }
     }
 
     (async () => {
@@ -146,6 +153,7 @@ export class ServerStream {
         const messageJSON = JSON.parse(message);
         twizzleLog(this, "received move", messageJSON);
         this.#bufferedLogFile.log(messageJSON);
+        this.#lastMessage = messageJSON;
         this.broadcast(messageJSON);
       } catch (e) {
         this.#bufferedLogFile.log({
@@ -228,9 +236,17 @@ export class ServerStream {
   }
 
   // deno-lint-ignore no-explicit-any
-  broadcast(message: Record<string, any>) {
+  private broadcast(message: Record<string, any>): void {
     for (const client of this.clients) {
-      client.webSocket.send(JSON.stringify(message));
+      this.sendToClient(client, message);
     }
+  }
+
+  private sendToClient(
+    client: ServerStreamClient,
+    // deno-lint-ignore no-explicit-any
+    message: Record<string, any>,
+  ): void {
+    client.webSocket.send(JSON.stringify(message));
   }
 }

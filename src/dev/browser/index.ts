@@ -1,9 +1,8 @@
 import { BareBlockMove } from "cubing/alg";
 import { debugKeyboardConnect } from "cubing/bluetooth";
 import { TwistyPlayer } from "cubing/twisty";
-import { P } from "../../../../../Library/Caches/deno/deps/https/cdn.skypack.dev/974f7d518f512207d84c42dca57a1c4997f6b596fd0681ab3b3d2558dba95e2b";
 import { TwizzleAPIClient } from "../../api.twizzle.net/client/index.ts";
-import { Stream } from "../../api.twizzle.net/client/Stream.ts";
+import { MoveEvent, Stream } from "../../api.twizzle.net/client/Stream.ts";
 import { prod, setProd } from "../../api.twizzle.net/common/config.ts";
 
 setProd(process.env.NODE_ENV === "production");
@@ -92,15 +91,21 @@ function resetTwistyPlayer(): TwistyPlayer {
       a.textContent = `${stream.streamInfo.senders[0]?.name ??
         "<unknown stream>"} 0x${stream.streamID.slice(-2)}`;
       a.addEventListener("click", async (e: Event) => {
+        e.preventDefault();
         if (stream.permittedToSend()) {
           startSending(stream);
         } else {
-          e.preventDefault();
           await stream.connect();
           viewerElem.textContent = "";
           const twistyPlayer = resetTwistyPlayer();
-          stream.addListener((moveEvent) => {
-            twistyPlayer.experimentalAddMove(moveEvent.latestMove);
+          let firstEvent = true;
+          stream.addListener((moveEvent: MoveEvent) => {
+            if (firstEvent) {
+              twistyPlayer.experimentalSetStartStateOverride(moveEvent.state);
+              firstEvent = false;
+            } else {
+              twistyPlayer.experimentalAddMove(moveEvent.latestMove);
+            }
           });
         }
       });

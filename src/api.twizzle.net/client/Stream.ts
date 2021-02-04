@@ -9,6 +9,8 @@ export interface MoveEvent {
   // deno-lint-ignore no-explicit-any
   latestMove: any;
   timeStamp: number;
+  // deno-lint-ignore no-explicit-any
+  state?: any; // Transformation
 }
 
 type MoveListener = (moveEvent: MoveEvent) => void;
@@ -116,7 +118,6 @@ export class Stream {
   // deno-lint-ignore no-explicit-any
   onMessage(messageEvent: MessageEvent<any>): void {
     const message: { data: MoveEvent } = JSON.parse(messageEvent.data); // TODO: error handling
-    console.log("onMessage", message);
     for (const listener of this.#listeners) {
       listener(message.data);
     }
