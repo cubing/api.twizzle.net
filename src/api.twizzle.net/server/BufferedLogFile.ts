@@ -23,6 +23,7 @@ export class BufferedLogFile {
   }
 
   flush(): void {
+    // TODO: keep file open?
     Deno.writeTextFile(this.filename, this.buffer, { append: true });
     this.activeTimeout = null;
   }
