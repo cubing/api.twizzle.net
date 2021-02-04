@@ -31,7 +31,12 @@ deploy-server:
 		./Makefile \
 		./src \
 		api-twizzle-net:~/api.twizzle.net/
+	make restart-prod-api-server
 
+.PHONY: restart-prod-api-server
+restart-prod-api-server:
+	gcloud compute ssh api-twizzle-net --project cubing --zone us-west2-b -- "fish -c \"cd ~/api.twizzle.net/ ; set -x TWIZZLE_WCA_APPLICATION_CLIENT_SECRET (cat ~/secrets/TWIZZLE_WCA_APPLICATION_CLIENT_SECRET.txt) ; pkill make; nohup make prod &\" ; exit"
+	
 CLIENT_SFTP_PATH = "towns.dreamhost.com:~/twizzle.net/stream/"
 CLIENT_URL       = "https://twizzle.net/stream/"
 
