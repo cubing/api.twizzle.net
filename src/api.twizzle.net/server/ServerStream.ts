@@ -45,7 +45,8 @@ export class ServerStream {
     `./data/log/streams/${this.streamID}.log`,
   );
 
-  #lastMessage: MessageEvent<BinaryMoveEvent> | null = null;
+  #lastMoveMessage: MessageEvent<BinaryMoveEvent> | null = null;
+  #lastOrientationMessage: MessageEvent<BinaryMoveEvent> | null = null;
 
   constructor(
     private streamTerminatedCallback: (stream: ServerStream) => void,
@@ -62,7 +63,7 @@ export class ServerStream {
     this.startTerminationTimeout(); // TODO: handle no one ever connecting
 
     this.#bufferedLogFile.log({
-      "event": "initialized",
+      event: "initialized",
       streamID: this.streamID,
       initialPermittedSenders: Array.from(this.permittedSenderIDs.values()),
     });
@@ -76,15 +77,12 @@ export class ServerStream {
   }
 
   permittedSenderPublicInfos(): TwizzleUserPublicInfo[] {
-    return Array.from(this.permittedSenderIDs.values()).map(
-      (senderUserID) => TwizzleUser.publicInfo(senderUserID),
+    return Array.from(this.permittedSenderIDs.values()).map((senderUserID) =>
+      TwizzleUser.publicInfo(senderUserID)
     );
   }
 
-  addClient(
-    webSocket: WebSocket,
-    maybeUser: TwizzleUser | null,
-  ): void {
+  addClient(webSocket: WebSocket, maybeUser: TwizzleUser | null): void {
     if (this.#terminated) {
       twizzleError(
         this,
@@ -93,8 +91,9 @@ export class ServerStream {
       );
     }
 
-    const clientIsPermittedToSend = !!(maybeUser &&
-      this.permittedSenderIDs.has(maybeUser.id));
+    const clientIsPermittedToSend = !!(
+      maybeUser && this.permittedSenderIDs.has(maybeUser.id)
+    );
     console.log(
       this.permittedSenderIDs.size,
       maybeUser?.id,
@@ -103,7 +102,7 @@ export class ServerStream {
     const client = new ServerStreamClient(webSocket, clientIsPermittedToSend);
     this.clients.add(client);
     this.#bufferedLogFile.log({
-      "event": "client-added",
+      event: "client-added",
       clientID: client.clientID,
       userID: maybeUser?.id ?? null,
       clientIsPermittedToSend,
@@ -111,8 +110,11 @@ export class ServerStream {
     if (clientIsPermittedToSend) {
       this.clearPendingTimeout();
     } else {
-      if (this.#lastMessage) {
-        this.sendToClient(client, this.#lastMessage);
+      if (this.#lastMoveMessage) {
+        this.sendToClient(client, this.#lastMoveMessage);
+      }
+      if (this.#lastOrientationMessage) {
+        this.sendToClient(client, this.#lastOrientationMessage);
       }
     }
 
@@ -154,13 +156,18 @@ export class ServerStream {
       try {
         // TODO: validate
         const messageJSON = JSON.parse(message);
-        twizzleLog(this, "received move", messageJSON);
+        // twizzleLog(this, "received move", messageJSON);
         this.#bufferedLogFile.log(messageJSON);
-        this.#lastMessage = messageJSON;
+        if (messageJSON.event === "move") {
+          this.#lastMoveMessage = messageJSON;
+        }
+        if (messageJSON.event === "orientation") {
+          this.#lastOrientationMessage = messageJSON;
+        }
         this.broadcast(messageJSON);
       } catch (e) {
         this.#bufferedLogFile.log({
-          "event": "message-invalid",
+          event: "message-invalid",
           clientID: client.clientID,
         });
       }
@@ -224,7 +231,7 @@ export class ServerStream {
     client.closeIfNotYetClosed();
     this.clients.delete(client);
     this.#bufferedLogFile.log({
-      "event": "client-removed",
+      event: "client-removed",
       clientID: client.clientID,
     });
 

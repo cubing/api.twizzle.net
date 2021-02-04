@@ -71,21 +71,27 @@ function resetCamera(options?: { resetToNonTracking: boolean }): void {
     (twistyPlayer.viewerElems[0] as Twisty3DCanvas).camera.position.set(
       0,
       4,
-      5
+      5,
     );
   } else {
     trackingOrientation = false;
     (twistyPlayer.viewerElems[0] as Twisty3DCanvas).camera.position.set(
       3,
       4,
-      5
+      5,
     );
+    twistyPlayer.scene.twisty3Ds.forEach((twisty3DPuzzle: Twisty3DPuzzle) => {
+      twisty3DPuzzle.quaternion.copy(new Quaternion()); // TODO
+    });
   }
   (twistyPlayer.viewerElems[0] as Twisty3DCanvas).camera.lookAt(0, 0, 0);
-  twistyPlayer.scene.twisty3Ds.forEach((twisty3DPuzzle: Twisty3DPuzzle) => {
-    twisty3DPuzzle.quaternion.copy(new Quaternion()); // TODO
-  });
-  (twistyPlayer.timeline as any).dispatchTimestamp(); // TODO
+  currentStream
+    ?.sendOrientationEvent({
+      timeStamp: 0,
+      quaternion: { x: 0, y: 0, z: 0, w: 1 },
+    });
+  (twistyPlayer.timeline as any)
+    .dispatchTimestamp(); // TODO
 }
 function setOrientation(orientationEvent: OrientationEvent) {
   if (!trackingOrientation) {
@@ -221,9 +227,8 @@ function clearStreamSelectors(message?: string) {
       elem.prepend(a);
       a.classList.add("stream-selector");
       a.href = "#";
-      a.textContent = `${
-        stream.streamInfo.senders[0]?.name ?? "<unknown stream>"
-      } 0x${stream.streamID.slice(-2)}`;
+      a.textContent = `${stream.streamInfo.senders[0]?.name ??
+        "<unknown stream>"} 0x${stream.streamID.slice(-2)}`;
       a.addEventListener("click", async (e: Event) => {
         e.preventDefault();
         if (stream.permittedToSend()) {
@@ -232,12 +237,14 @@ function clearStreamSelectors(message?: string) {
           await stream.connect();
           resetPuzzle();
           let firstEvent = true;
-          const playerMoveMonoplexListener = playerMoveMonoplexer.newMonoplexListener();
-          const playerOriMonoplexListener = playerOriMonoplexer.newMonoplexListener();
+          const playerMoveMonoplexListener = playerMoveMonoplexer
+            .newMonoplexListener();
+          const playerOriMonoplexListener = playerOriMonoplexer
+            .newMonoplexListener();
           stream.addMoveListener((binaryMoveEvent: BinaryMoveEvent) => {
             if (
               playerMoveMonoplexer.currentMonoplexListener !==
-              playerMoveMonoplexListener
+                playerMoveMonoplexListener
             ) {
               return;
             }
@@ -245,7 +252,7 @@ function clearStreamSelectors(message?: string) {
             const moveEvent = mutateToTransformation(binaryMoveEvent);
             if (firstEvent) {
               twistyPlayer.experimentalSetStartStateOverride(
-                moveEvent.state
+                moveEvent.state,
               );
               firstEvent = false;
             } else {
@@ -253,7 +260,7 @@ function clearStreamSelectors(message?: string) {
               if (!sameStates(def, twistyPlayer, moveEvent)) {
                 twistyPlayer.alg = new Sequence([]);
                 twistyPlayer.experimentalSetStartStateOverride(
-                  moveEvent.state
+                  moveEvent.state,
                 );
               }
             }
@@ -261,7 +268,7 @@ function clearStreamSelectors(message?: string) {
           stream.addOrientationListener(
             (orientationEvent: OrientationEvent) => {
               playerOriMonoplexListener(orientationEvent);
-            }
+            },
           );
         }
         setCurrentStreamElem(a);
@@ -270,8 +277,10 @@ function clearStreamSelectors(message?: string) {
     }
 
     for (const stream of streams) {
-      const elem = stream.permittedToSend() ? streamListMineElem : streamListOthersElem;
-      addStreamButton(elem, stream)
+      const elem = stream.permittedToSend()
+        ? streamListMineElem
+        : streamListOthersElem;
+      addStreamButton(elem, stream);
     }
     const connectKeyboardButton = connectElem.appendChild(
       document.createElement("button"),
@@ -292,18 +301,24 @@ function clearStreamSelectors(message?: string) {
         return;
       }
       smartPuzzle = null;
-      resetPuzzle()
+      resetPuzzle();
+      resetPuzzleButton.disabled = false;
+      resetPuzzleButton.focus();
       connectKeyboardButton.textContent = "✅ Connected keyboard!";
       connectSmartPuzzleButton.textContent = "Connect smart cube";
-      keyboardPuzzle.addMoveListener(playerMoveMonoplexer.newMonoplexListener());
-      keyboardPuzzle.addMoveListener(streamMoveMonoplexer.newMonoplexListener());
+      keyboardPuzzle.addMoveListener(
+        playerMoveMonoplexer.newMonoplexListener(),
+      );
+      keyboardPuzzle.addMoveListener(
+        streamMoveMonoplexer.newMonoplexListener(),
+      );
       resetCamera({ resetToNonTracking: true });
       playerOriMonoplexer.newMonoplexListener(); // reset to empty
       streamOriMonoplexer.newMonoplexListener(); // reset to empty
     });
     connectSmartPuzzleButton.textContent = "Connect smart cube";
     let smartPuzzle: BluetoothPuzzle | null = null;
-      const smartCubeKPuzzle = new KPuzzle(def);
+    const smartCubeKPuzzle = new KPuzzle(def);
     connectSmartPuzzleButton.addEventListener("click", async () => {
       connectSmartPuzzleButton.textContent = "⏳ Connecting to smart cube...";
       try {
@@ -319,6 +334,8 @@ function clearStreamSelectors(message?: string) {
       connectKeyboardButton.textContent = "Connect keyboard";
       smartCubeKPuzzle.reset();
       resetPuzzle();
+      resetPuzzleButton.disabled = false;
+      resetPuzzleButton.focus();
       const playerMoveMonoplexListener = playerMoveMonoplexer
         .newMonoplexListener();
       const streamMoveMonoplexListener = streamMoveMonoplexer
@@ -333,14 +350,17 @@ function clearStreamSelectors(message?: string) {
         .newMonoplexListener();
       const streamOriMonoplexListener = streamOriMonoplexer
         .newMonoplexListener();
-      smartPuzzle.addOrientationListener((orientationEvent: OrientationEvent) => {
-        playerOriMonoplexListener(orientationEvent);
-        streamOriMonoplexListener(orientationEvent);
-      });
+      smartPuzzle.addOrientationListener(
+        (orientationEvent: OrientationEvent) => {
+          playerOriMonoplexListener(orientationEvent);
+          streamOriMonoplexListener(orientationEvent);
+        },
+      );
     });
     const resetPuzzleButton = connectElem.appendChild(
-      document.createElement("button")
+      document.createElement("button"),
     );
+    resetPuzzleButton.disabled = true;
     resetPuzzleButton.textContent = "Reset cube";
     resetPuzzleButton.addEventListener("click", resetPuzzle);
     if (client.authenticated()) {
@@ -351,7 +371,9 @@ function clearStreamSelectors(message?: string) {
 
       startStreamButton.addEventListener("click", async () => {
         const sendingStream = await client.createStream();
-        setCurrentStreamElem(addStreamButton(streamListMineElem, sendingStream));
+        setCurrentStreamElem(
+          addStreamButton(streamListMineElem, sendingStream),
+        );
         startSending(sendingStream);
       });
     }
