@@ -46,3 +46,19 @@ export interface OrientationEvent {
   timeStamp: number;
   // debug?: Record<string, unknown>;
 }
+
+// TODO: Reuse https://github.com/cubing/cubing.js/blob/ec71ca736f29bae8ed6104f887a5cbe5fc962e8c/src/cubing/bluetooth/bluetooth-puzzle.ts#L21:L30
+export interface ResetEvent {
+  trackingOrientation: boolean
+}
+
+export type StreamMessageEvent =
+  | { event: "move"; data: MoveEvent }
+  | {
+      event: "orientation";
+      data: OrientationEvent;
+    }
+  | {
+      event: "reset";
+      data: ResetEvent;
+    };

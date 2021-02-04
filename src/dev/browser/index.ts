@@ -16,7 +16,7 @@ import { Quaternion } from "three";
 import { TwizzleAPIClient } from "../../api.twizzle.net/client/index";
 import { Stream } from "../../api.twizzle.net/client/Stream";
 import { prod, setProd } from "../../api.twizzle.net/common/config";
-import { BinaryMoveEvent } from "../../api.twizzle.net/common/stream";
+import { BinaryMoveEvent, ResetEvent } from "../../api.twizzle.net/common/stream";
 import { mutateToBinary, mutateToTransformation } from "./binary";
 
 setProd(process.env.NODE_ENV === "production");
@@ -46,11 +46,6 @@ const twistyPlayer = viewerElem.appendChild(
     controlPanel: "none",
   }),
 );
-
-function resetTwistyPlayer(): void {
-  twistyPlayer.alg = new Sequence([]);
-  twistyPlayer.experimentalSetStartStateOverride(null);
-}
 
 class ListenerMonoplexer<E> {
   constructor(private actualListener: (e: E) => void) {}
@@ -85,10 +80,9 @@ function resetCamera(options?: { resetToNonTracking: boolean }): void {
     });
   }
   (twistyPlayer.viewerElems[0] as Twisty3DCanvas).camera.lookAt(0, 0, 0);
-  currentStream
-    ?.sendOrientationEvent({
-      timeStamp: 0,
-      quaternion: { x: 0, y: 0, z: 0, w: 1 },
+  currentSendingStream
+    ?.sendResetEvent({
+      trackingOrientation,
     });
   (twistyPlayer.timeline as any)
     .dispatchTimestamp(); // TODO
@@ -96,7 +90,7 @@ function resetCamera(options?: { resetToNonTracking: boolean }): void {
 function setOrientation(orientationEvent: OrientationEvent) {
   if (!trackingOrientation) {
     // First orientation event.
-    trackingOrientation = true;
+    trackingOrientation = !(orientationEvent as any).noMoreOriAfterThis;
     resetCamera();
   }
   twistyPlayer.scene.twisty3Ds.forEach(
@@ -116,18 +110,18 @@ const playerMoveMonoplexer = new ListenerMonoplexer<MoveEvent>(
 const playerOriMonoplexer = new ListenerMonoplexer<OrientationEvent>(
   (orientationEvent: OrientationEvent) => {
     setOrientation(orientationEvent);
-  },
+  }
 );
-let currentStream: Stream | null = null;
+let currentSendingStream: Stream | null = null;
 const streamMoveMonoplexer = new ListenerMonoplexer<MoveEvent>(
   (moveEvent: MoveEvent) => {
-    currentStream?.sendMoveEvent(mutateToBinary(moveEvent));
+    currentSendingStream?.sendMoveEvent(mutateToBinary(moveEvent));
   },
 );
 const streamOriMonoplexer = new ListenerMonoplexer<OrientationEvent>(
   (orientationEvent: OrientationEvent) => {
-    currentStream?.sendOrientationEvent(orientationEvent);
-  },
+    currentSendingStream?.sendOrientationEvent(orientationEvent);
+  }
 );
 
 function sameStates(
@@ -191,16 +185,14 @@ function clearStreamSelectors(message?: string) {
 
     const def = await defPromise;
 
-    async function resetPuzzle(): Promise<void> {
+    async function resetPuzzle(resetEvent?: ResetEvent): Promise<void> {
       twistyPlayer.alg = new Sequence([]);
       twistyPlayer.experimentalSetStartStateOverride(def.startPieces);
 
       if (keyboardPuzzle !== null) {
         resetCamera({ resetToNonTracking: true });
         (await keyboardPuzzle.puzzle).reset();
-      }
-      if (smartPuzzle !== null) {
-        resetCamera();
+      } else if (smartPuzzle !== null) {
         if (
           (smartPuzzle as GoCube | { resetOrientation?: () => void })
             .resetOrientation
@@ -212,14 +204,22 @@ function clearStreamSelectors(message?: string) {
         if ((smartPuzzle as GanCube | { reset?: () => void }).reset) {
           (smartPuzzle as GanCube | { reset?: () => void }).reset();
         }
+        resetCamera();
+      } else if (resetEvent) {
+        resetCamera({resetToNonTracking: !resetEvent?.trackingOrientation});
       }
     }
+    const playerResetMonoplexer = new ListenerMonoplexer<ResetEvent>(
+      (resetEvent: ResetEvent) => {
+        resetPuzzle(resetEvent);
+      }
+    );
 
     const startSending = async (stream: Stream): Promise<void> => {
       console.log("Starting stream:", stream);
 
       await stream.connect();
-      currentStream = stream;
+      currentSendingStream = stream;
     };
 
     function addStreamButton(elem: Element, stream: Stream): Element {
@@ -239,8 +239,8 @@ function clearStreamSelectors(message?: string) {
           let firstEvent = true;
           const playerMoveMonoplexListener = playerMoveMonoplexer
             .newMonoplexListener();
-          const playerOriMonoplexListener = playerOriMonoplexer
-            .newMonoplexListener();
+          const playerOriMonoplexListener = playerOriMonoplexer.newMonoplexListener();
+          const playerResetMonoplexListener = playerResetMonoplexer.newMonoplexListener();
           stream.addMoveListener((binaryMoveEvent: BinaryMoveEvent) => {
             if (
               playerMoveMonoplexer.currentMonoplexListener !==
@@ -270,6 +270,9 @@ function clearStreamSelectors(message?: string) {
               playerOriMonoplexListener(orientationEvent);
             },
           );
+          stream.addResetListener((resetEvent: ResetEvent) => {
+            playerResetMonoplexListener(resetEvent);
+          })
         }
         setCurrentStreamElem(a);
       });

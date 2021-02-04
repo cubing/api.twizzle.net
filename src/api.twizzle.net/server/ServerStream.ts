@@ -4,6 +4,7 @@ import { twizzleError, twizzleLog } from "../common/log.ts";
 import {
   BinaryMoveEvent,
   ClientID,
+  ResetEvent,
   StreamID,
   StreamInfo,
 } from "../common/stream.ts";
@@ -12,6 +13,7 @@ import { TwizzleUser } from "./db/TwizzleUser.ts";
 import { TwizzleUserPublicInfo } from "../common/user.ts";
 import { BufferedLogFile } from "./BufferedLogFile.ts";
 import { ensureDir } from "https://deno.land/std@0.85.0/fs/mod.ts";
+import { OrientationEvent } from "../common/stream.ts";
 const STREAM_TIMEOUT_MS = 10 * 60 * 1000;
 
 ensureDir("./data/log/streams");
@@ -45,8 +47,10 @@ export class ServerStream {
     `./data/log/streams/${this.streamID}.log`,
   );
 
+  // TODO: put these in e.g. a map.
   #lastMoveMessage: MessageEvent<BinaryMoveEvent> | null = null;
-  #lastOrientationMessage: MessageEvent<BinaryMoveEvent> | null = null;
+  #lastOrientationMessage: MessageEvent<OrientationEvent> | null = null;
+  #lastResetMessage: MessageEvent<ResetEvent> | null = null;
 
   constructor(
     private streamTerminatedCallback: (stream: ServerStream) => void,
@@ -116,6 +120,9 @@ export class ServerStream {
       if (this.#lastOrientationMessage) {
         this.sendToClient(client, this.#lastOrientationMessage);
       }
+      if (this.#lastResetMessage) {
+        this.sendToClient(client, this.#lastResetMessage);
+      }
     }
 
     (async () => {
@@ -156,13 +163,15 @@ export class ServerStream {
       try {
         // TODO: validate
         const messageJSON = JSON.parse(message);
-        // twizzleLog(this, "received move", messageJSON);
         this.#bufferedLogFile.log(messageJSON);
         if (messageJSON.event === "move") {
           this.#lastMoveMessage = messageJSON;
         }
         if (messageJSON.event === "orientation") {
           this.#lastOrientationMessage = messageJSON;
+        }
+        if (messageJSON.event === "reset") {
+          this.#lastResetMessage = messageJSON;
         }
         this.broadcast(messageJSON);
       } catch (e) {

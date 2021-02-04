@@ -1,15 +1,24 @@
 // import { WebSocket } from "https://deno.land/x/websocket@v0.0.5/mod.ts";
 import { twizzleLog } from "../common/log.ts";
-import { BinaryMoveEvent, OrientationEvent } from "../common/stream.ts";
-import { MoveEvent, StreamID, StreamInfo } from "../common/stream.ts";
+import {
+  BinaryMoveEvent,
+  MoveEvent,
+  OrientationEvent,
+  ResetEvent,
+  StreamID,
+  StreamInfo,
+  StreamMessageEvent,
+} from "../common/stream.ts";
 import { StoredSessionInfo } from "./StoredSessionInfo.ts";
 
 type MoveListener = (moveEvent: MoveEvent) => void;
 type OrientationListener = (orientationEvent: OrientationEvent) => void;
+type ResetListener = (resetEvent: ResetEvent) => void;
 
 export class Stream {
   #moveListeners: Set<MoveListener> = new Set();
   #orientationListeners: Set<OrientationListener> = new Set();
+  #resetListeners: Set<ResetListener> = new Set();
 
   public streamID: StreamID;
   #streamURL: string;
@@ -40,6 +49,14 @@ export class Stream {
 
   removeOrientationListener(listener: OrientationListener): void {
     this.#orientationListeners.delete(listener);
+  }
+
+  addResetListener(listener: ResetListener): void {
+    this.#resetListeners.add(listener);
+  }
+
+  removeResetListener(listener: ResetListener): void {
+    this.#resetListeners.delete(listener);
   }
 
   permittedToSend(): boolean {
@@ -97,6 +114,7 @@ export class Stream {
   // TODO: remove `any`
   sendMoveEvent(binaryMoveEvent: BinaryMoveEvent): void {
     (async () => {
+      // We wrap in an inline async to avoid letting callers wait on this.
       if (!this.#webSocket) {
         // TODO: write test
         throw new Error("cannot send to stream while disconnected");
@@ -113,6 +131,11 @@ export class Stream {
   // TODO: remove `any`
   sendOrientationEvent(orientationEvent: OrientationEvent): void {
     (async () => {
+      // We wrap in an inline async to avoid letting callers wait on this.
+      if (!this.#webSocket) {
+        // TODO: write test
+        throw new Error("cannot send to stream while disconnected");
+      }
       orientationEvent.timeStamp = Math.floor(orientationEvent.timeStamp); // Reduce size on the wire.
       orientationEvent.quaternion.x =
         Math.floor(10000 * orientationEvent.quaternion.x) / 10000;
@@ -122,10 +145,6 @@ export class Stream {
         Math.floor(10000 * orientationEvent.quaternion.z) / 10000;
       orientationEvent.quaternion.w =
         Math.floor(10000 * orientationEvent.quaternion.w) / 10000;
-      if (!this.#webSocket) {
-        // TODO: write test
-        throw new Error("cannot send to stream while disconnected");
-      }
       (await this.#webSocket).send(
         JSON.stringify({
           event: "orientation",
@@ -135,12 +154,26 @@ export class Stream {
     })();
   }
 
+  sendResetEvent(resetEvent: ResetEvent): void {
+    (async () => {
+      // We wrap in an inline async to avoid letting callers wait on this.
+      if (!this.#webSocket) {
+        // TODO: write test
+        throw new Error("cannot send to stream while disconnected");
+      }
+
+      (await this.#webSocket).send(
+        JSON.stringify({
+          event: "reset",
+          data: resetEvent,
+        }),
+      );
+    })();
+  }
+
   // deno-lint-ignore no-explicit-any
   onMessage(messageEvent: MessageEvent<any>): void {
-    const message: { event: "move"; data: MoveEvent } | {
-      event: "orientation";
-      data: OrientationEvent;
-    } = JSON.parse(messageEvent.data); // TODO: error handling
+    const message: StreamMessageEvent = JSON.parse(messageEvent.data); // TODO: error handling
     switch (message?.event) {
       case "move":
         for (const moveListener of this.#moveListeners) {
@@ -150,6 +183,11 @@ export class Stream {
       case "orientation":
         for (const orientationListener of this.#orientationListeners) {
           orientationListener(message.data);
+        }
+        break;
+      case "reset":
+        for (const resetListener of this.#resetListeners) {
+          resetListener(message.data);
         }
         break;
     }
