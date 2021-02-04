@@ -1,6 +1,6 @@
 import { Sequence } from "cubing/alg";
-import { debugKeyboardConnect, MoveEvent } from "cubing/bluetooth";
-import { EquivalentStates, KPuzzleDefinition } from "cubing/kpuzzle";
+import { connect, debugKeyboardConnect, MoveEvent } from "cubing/bluetooth";
+import { EquivalentStates, KPuzzle, KPuzzleDefinition } from "cubing/kpuzzle";
 import { cube3x3x3 } from "cubing/puzzles";
 import { TwistyPlayer } from "cubing/twisty";
 import { TwizzleAPIClient } from "../../api.twizzle.net/client/index";
@@ -19,6 +19,7 @@ const client = new TwizzleAPIClient(localStorage);
 
 const viewerElem = document.querySelector("#viewer");
 const signInElem = document.querySelector("#sign-in");
+const connectElem = document.querySelector("#connect");
 const manageStreamElem = document.querySelector("#manage-stream");
 const selectorsElem = document.querySelector("#selectors");
 
@@ -34,9 +35,7 @@ function resetTwistyPlayer(): void {
 }
 
 class ListenerMonoplexer {
-  actualListener = (moveEvent: MoveEvent): void => {
-    twistyPlayer.experimentalAddMove(moveEvent.latestMove);
-  };
+  constructor(private actualListener: (moveEvent: MoveEvent) => void) {}
   currentMonoplexListener: (moveEvent: MoveEvent) => void = () => {};
   newMonoplexListener(): (moveEvent: MoveEvent) => void {
     const proxyListener = (moveEvent: MoveEvent) => {
@@ -47,7 +46,13 @@ class ListenerMonoplexer {
     return this.currentMonoplexListener = proxyListener;
   }
 }
-const listenerMonoplexer = new ListenerMonoplexer();
+const playerMonoplexer = new ListenerMonoplexer((moveEvent: MoveEvent) => {
+  twistyPlayer.experimentalAddMove(moveEvent.latestMove);
+});
+let currentStream: Stream | null = null
+const streamMonoplexer = new ListenerMonoplexer((moveEvent: MoveEvent) => {
+  currentStream?.sendMoveEvent(mutateToBinary(moveEvent));
+ });
 
 function sameStates(
   def: KPuzzleDefinition,
@@ -108,13 +113,8 @@ const defPromise = cube3x3x3.def();
     const startSending = async (stream: Stream): Promise<void> => {
       console.log("Starting stream:", stream);
 
-      const kb = await debugKeyboardConnect();
-      const monoplexListener = listenerMonoplexer.newMonoplexListener();
-      kb.addMoveListener((e: any) => {
-        monoplexListener(e);
-        stream.sendMoveEvent(mutateToBinary(e));
-      });
       await stream.connect();
+      currentStream = stream;
       manageStreamElem.textContent = "";
       manageStreamElem.appendChild(document.createElement("span"))
         .textContent = `Stream: 0x${stream.streamID.slice(-2)}`;
@@ -134,18 +134,19 @@ const defPromise = cube3x3x3.def();
           await stream.connect();
           resetTwistyPlayer();
           let firstEvent = true;
-          const monoplexListener = listenerMonoplexer.newMonoplexListener();
+          const playerMonoplexListener = playerMonoplexer.newMonoplexListener();
           stream.addListener((binaryMoveEvent: BinaryMoveEvent) => {
+            if (playerMonoplexer.currentMonoplexListener !== playerMonoplexListener) {
+              return;
+            }
+
             const moveEvent = mutateToTransformation(binaryMoveEvent);
             if (firstEvent) {
               twistyPlayer.experimentalSetStartStateOverride(moveEvent.state);
               firstEvent = false;
             } else {
-              monoplexListener(moveEvent);
-
-              if (sameStates(def, twistyPlayer, moveEvent)) {
-                console.log("same");
-              } else {
+              playerMonoplexListener(moveEvent);
+              if (!sameStates(def, twistyPlayer, moveEvent)) {
                 twistyPlayer.alg = new Sequence([]);
                 twistyPlayer.experimentalSetStartStateOverride(moveEvent.state);
               }
@@ -154,6 +155,31 @@ const defPromise = cube3x3x3.def();
         }
       });
     }
+    const connectKeyboardButton = connectElem.appendChild(
+      document.createElement("button")
+    );
+    connectKeyboardButton.textContent = "Connect keyboard";
+    connectKeyboardButton.addEventListener("click", async () => {
+      const keyboardPuzzle = await debugKeyboardConnect();
+      keyboardPuzzle.addMoveListener(playerMonoplexer.newMonoplexListener());
+      keyboardPuzzle.addMoveListener(streamMonoplexer.newMonoplexListener());
+    });
+    const connectSmartPuzzleButton = connectElem.appendChild(
+      document.createElement("button")
+    );
+    connectSmartPuzzleButton.textContent = "Connect smart cube";
+    connectSmartPuzzleButton.addEventListener("click", async () => {
+      const bluetoothPuzzle = await connect();
+      const smartCubeKPuzzle = new KPuzzle(def);
+      const playerMonoplexListener = playerMonoplexer.newMonoplexListener();
+      const streamMonoplexListener = streamMonoplexer.newMonoplexListener();
+      bluetoothPuzzle.addMoveListener((moveEvent: MoveEvent) => {
+        smartCubeKPuzzle.applyBlockMove(moveEvent.latestMove);
+        moveEvent.state = smartCubeKPuzzle.state;
+        playerMonoplexListener(moveEvent);
+        streamMonoplexListener(moveEvent);
+      });
+    });
     if (client.authenticated()) {
       const startStreamButton = manageStreamElem.appendChild(
         document.createElement("button"),
