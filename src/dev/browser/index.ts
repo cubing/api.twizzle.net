@@ -250,7 +250,7 @@ function clearStreamSelectors(message?: string) {
         if (sending) {
           startSending(stream);
         } else {
-          await stream.connect();
+          await stream.connect({streamAuthMode: "anonymous"});
           resetPuzzle();
           let firstEvent = true;
           const playerMoveMonoplexListener = playerMoveMonoplexer

@@ -15,6 +15,10 @@ type MoveListener = (moveEvent: MoveEvent) => void;
 type OrientationListener = (orientationEvent: OrientationEvent) => void;
 type ResetListener = (resetEvent: ResetEvent) => void;
 
+// TODO: distingiush send/receive from credentialed/anonymous
+// TODO: make into enum
+type StreamAuthMode = "credential" | "anonymous";
+
 export class Stream {
   #moveListeners: Set<MoveListener> = new Set();
   #orientationListeners: Set<OrientationListener> = new Set();
@@ -74,13 +78,14 @@ export class Stream {
 
   // Idempotent: reuses an existing connection (or pending connection)
   // Returns once connected.
-  async connect(): Promise<void> {
+  async connect(options?: {streamAuthMode: StreamAuthMode}): Promise<void> {
     twizzleLog(this, "connecting", this.streamID);
     this.#webSocket ||= new Promise((resolve, reject) => {
       console.log(this.#streamURL);
       const socketURL = new URL(this.#streamURL);
       const twizzleAccessToken = this.#storedSessionInfo.twizzleAccessToken();
-      if (twizzleAccessToken) {
+      const streamAuthMode = options?.streamAuthMode ?? "credential";
+      if (streamAuthMode === "credential" && twizzleAccessToken) {
         // TODO: avoid including this in the URL?
         socketURL.searchParams.set("twizzleAccessToken", twizzleAccessToken);
       }
