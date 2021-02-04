@@ -1,3 +1,5 @@
+import { ensureDirSync } from "https://deno.land/std@0.85.0/fs/ensure_dir.ts";
+
 const BUFFER_DURATION_MS = 10 * 1000;
 
 export class BufferedLogFile {
@@ -28,3 +30,8 @@ export class BufferedLogFile {
     this.activeTimeout = null;
   }
 }
+
+ensureDirSync("./data/log/main");
+export const mainErrorLog = new BufferedLogFile(
+  `./data/log/error.log`,
+);

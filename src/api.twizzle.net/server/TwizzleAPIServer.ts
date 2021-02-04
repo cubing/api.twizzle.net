@@ -17,6 +17,7 @@ import {
 } from "../common/stream.ts";
 import { TwizzleSessionInfo } from "../common/user.ts";
 import { wcaGetToken } from "../common/wca.ts";
+import { mainErrorLog } from "./BufferedLogFile.ts";
 import {
   CLIENT_APP_URL,
   TWIZZLE_WCA_APPLICATION_CLIENT_SECRET,
@@ -86,7 +87,12 @@ export class TwizzleAPIServer {
           });
         }
       } catch (e) {
-        twizzleLog(this, "server error", e);
+        mainErrorLog.log({
+          "error": "serve-loop-error",
+          timeStamp: Date.now(),
+          errorMessage: e.toString(),
+        });
+        mainErrorLog.flush();
         request.respond({
           status: 500,
           headers,
