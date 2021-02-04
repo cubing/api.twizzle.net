@@ -1,0 +1,109 @@
+html,
+body {
+  margin: 0;
+  height: 100%;
+  font-family: sans-serif;
+  background: #f2f2f2;
+}
+
+body {
+  display: grid;
+  grid-template-areas: "viewer controls";
+  grid-template-columns: 2fr 1fr;
+}
+
+#viewer {
+  grid-area: "viewer";
+}
+
+#viewer > twisty-player {
+  width: 100%;
+  height: 100%;
+}
+
+#controls {
+  grid-area: "controls";
+  border-left: 1px solid rgba(0, 0, 0, 0.25);
+  box-sizing: border-box;
+  overflow: hidden;
+  overflow-y: auto;
+}
+
+h2 {
+  margin: 0;
+  background: #4285f4;
+  color: white;
+}
+
+#controls > h2 {
+  padding: 0.5em 1em;
+}
+
+#controls > div {
+  margin: 1em 1em;
+}
+
+#controls > #selectors {
+  margin: 1em 0.5em;
+}
+
+#connect,
+#manage-stream {
+  display: grid;
+  gap: 0.25em;
+}
+
+.stream-selector {
+  display: block;
+  color: inherit;
+  padding: 0.25em 0.5em;
+}
+
+.stream-selector.current {
+  background: rgba(66, 133, 244);
+  color: white;
+}
+
+.stream-selector:hover {
+  background: rgba(66, 133, 244, 0.8);
+  color: white;
+}
+
+.swipe-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-rows: 3em 1fr;
+}
+
+swipey-puzzle {
+  display: grid;
+  overflow: hidden;
+  contain: content;
+  position: relative;
+  top: 0;
+  height: 100%;
+}
+
+swipe-grid {
+  height: 100%;
+}
+
+twisty-player {
+  contain: content;
+  width: 100%;
+  height: 100%;
+}
+
+@media (max-width: 640px) and (min-height: 640px), (orientation: portrait) {
+  body {
+    grid-template: "viewer" "controls";
+    grid-template-rows: 2fr 1fr;
+  }
+
+  #controls {
+    border-left: none;
+    border-top: 1px solid rgba(0, 0, 0, 0.25);
+  }
+}

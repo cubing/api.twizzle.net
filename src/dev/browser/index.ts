@@ -18,6 +18,8 @@ import { Stream } from "../../api.twizzle.net/client/Stream";
 import { prod, setProd } from "../../api.twizzle.net/common/config";
 import { BinaryMoveEvent, ResetEvent } from "../../api.twizzle.net/common/stream";
 import { mutateToBinary, mutateToTransformation } from "./binary";
+import { SwipeGrid } from "./swipe-grid/SwipeGrid";
+import { SwipeyPuzzle } from "./swipe-grid/SwipeyPuzzle";
 
 setProd(process.env.NODE_ENV === "production");
 // console.log("NODE_ENV:", process.env.NODE_ENV);
@@ -41,11 +43,18 @@ function setCurrentStreamElem(elem: Element): void {
   currentStreamElem = elem;
 }
 
-const twistyPlayer = viewerElem.appendChild(
-  new TwistyPlayer({
-    controlPanel: "none",
-  }),
-);
+const swipeWrapper = viewerElem.appendChild(document.createElement("div"));
+swipeWrapper.classList.add("swipe-wrapper");
+const swipeyPuzzle: SwipeyPuzzle = swipeWrapper.appendChild(new SwipeyPuzzle(
+  "3x3x3",
+  console.log,
+  console.log
+));
+
+const twistyPlayer = swipeyPuzzle.twistyPlayer;
+twistyPlayer.controlPanel = "none";
+
+swipeyPuzzle.showGrid();
 
 class ListenerMonoplexer<E> {
   constructor(private actualListener: (e: E) => void) {}
@@ -364,7 +373,7 @@ function clearStreamSelectors(message?: string) {
     );
     resetPuzzleButton.disabled = true;
     resetPuzzleButton.textContent = "Reset cube";
-    resetPuzzleButton.addEventListener("click", resetPuzzle);
+    resetPuzzleButton.addEventListener("click", () => resetPuzzle());
     if (client.authenticated()) {
       const startStreamButton = manageStreamElem.appendChild(
         document.createElement("button"),
