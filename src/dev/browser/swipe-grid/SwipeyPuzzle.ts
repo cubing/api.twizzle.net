@@ -100,7 +100,6 @@ function constructTwistyPlayer(puzzleName: PuzzleID): TwistyPlayer {
     alg: new Sequence([]),
     puzzle: puzzleName,
     controlPanel: "none",
-    background: "none",
     backView,
     // experimentalStartSetup: getSetup(),
   });
