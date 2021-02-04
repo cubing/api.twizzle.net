@@ -9,6 +9,7 @@ import {
   WebSocket,
 } from "https://deno.land/std@0.85.0/ws/mod.ts";
 import { TwizzleAccessToken } from "../common/auth.ts";
+import { prod } from "../common/config.ts";
 import { twizzleLog } from "../common/log.ts";
 import {
   StreamID,
@@ -37,6 +38,7 @@ export class TwizzleAPIServer {
     mainInfoLog.log({
       "event": "start-server",
       port: PORT,
+      prod: prod(),
     });
     twizzleLog(this, "starting server on port:", PORT);
     this.restServer = serve({ hostname: "0.0.0.0", port: PORT });
