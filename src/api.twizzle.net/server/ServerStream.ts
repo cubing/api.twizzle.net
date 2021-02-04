@@ -130,7 +130,6 @@ export class ServerStream {
         for await (const message of webSocket) {
           this.onMessage(message as string, client);
         }
-        console.log("donneaAA?A?", client.clientID);
         this.removeClient(client);
       } catch (e) {
         this.#bufferedLogFile.log({
