@@ -5,8 +5,12 @@ import { ClientID, StreamID, StreamInfo } from "../common/stream.ts";
 import { newClientID, newStreamID } from "./identifiers.ts";
 import { TwizzleUser } from "./db/TwizzleUser.ts";
 import { TwizzleUserPublicInfo } from "../common/user.ts";
+import { BufferedLogFile } from "./BufferedLogFile.ts";
+import { ensureDir } from "https://deno.land/std@0.85.0/fs/mod.ts";
 
 const STREAM_TIMEOUT_MS = 2000; //10 * 60 * 1000;
+
+ensureDir("./data/log/streams");
 
 class ServerStreamClient {
   clientID: ClientID = newClientID();
@@ -32,6 +36,10 @@ export class ServerStream {
 
   #pendingTerminationTimeoutID: number | null = null;
   #terminated = false;
+  // TODO: can we trust our own stream IDs?
+  #bufferedLogFile = new BufferedLogFile(
+    `./data/log/streams/${this.streamID}.log`,
+  );
 
   constructor(
     private streamTerminatedCallback: (stream: ServerStream) => void,
@@ -46,6 +54,12 @@ export class ServerStream {
       Array.from(this.permittedSenderIDs.values()),
     );
     this.startTerminationTimeout(); // TODO: handle no one ever connecting
+
+    this.#bufferedLogFile.log({
+      "event": "initialized",
+      streamID: this.streamID,
+      initialPermittedSenders: Array.from(this.permittedSenderIDs.values()),
+    });
   }
 
   toJSON(): StreamInfo {
@@ -82,6 +96,12 @@ export class ServerStream {
     );
     const client = new ServerStreamClient(webSocket, clientIsPermittedToSend);
     this.clients.add(client);
+    this.#bufferedLogFile.log({
+      "event": "client-added",
+      clientID: client.clientID,
+      userID: maybeUser?.id ?? null,
+      clientIsPermittedToSend,
+    });
     if (clientIsPermittedToSend) {
       this.clearPendingTimeout();
     }
@@ -114,8 +134,18 @@ export class ServerStream {
         );
         return;
       }
-      twizzleLog(this, "received move", message);
-      this.broadcast(message);
+      try {
+        // TODO: validate
+        const messageJSON = JSON.parse(message);
+        twizzleLog(this, "received move", messageJSON);
+        this.#bufferedLogFile.log(messageJSON);
+        this.broadcast(messageJSON);
+      } catch (e) {
+        this.#bufferedLogFile.log({
+          "event": "message-invalid",
+          clientID: client.clientID,
+        });
+      }
     }
   }
 
@@ -175,6 +205,10 @@ export class ServerStream {
     );
     client.closeIfNotYetClosed();
     this.clients.delete(client);
+    this.#bufferedLogFile.log({
+      "event": "client-removed",
+      clientID: client.clientID,
+    });
 
     if (this.numSendingClients() === 0) {
       twizzleLog(
@@ -186,9 +220,10 @@ export class ServerStream {
     }
   }
 
-  broadcast(message: string) {
+  // deno-lint-ignore no-explicit-any
+  broadcast(message: Record<string, any>) {
     for (const client of this.clients) {
-      client.webSocket.send(message);
+      client.webSocket.send(JSON.stringify(message));
     }
   }
 }

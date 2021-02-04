@@ -1,3 +1,4 @@
+import { ensureDir } from "https://deno.land/std@0.85.0/fs/ensure_dir.ts";
 import {
   ClaimToken,
   TwizzleAccessToken,
@@ -5,6 +6,7 @@ import {
 } from "../../common/auth.ts";
 import { TwizzleUserPublicInfo } from "../../common/user.ts";
 import { WCAAccountInfo } from "../../common/wca.ts";
+import { BufferedLogFile } from "../BufferedLogFile.ts";
 import {
   newClaimToken,
   newTwizzleAccessToken,
@@ -12,6 +14,9 @@ import {
 } from "../identifiers.ts";
 
 import { tables } from "./tables.ts";
+
+ensureDir("./data/log/users");
+const usersLog = new BufferedLogFile("./data/log/users/users.log");
 
 export class TwizzleUser {
   id: TwizzleUserID = newTwizzleUserID();
@@ -47,6 +52,11 @@ export class TwizzleUser {
       return null;
     }
     tables.claimIndex.delete(claimToken);
+    usersLog.log({
+      event: "claim-user",
+      id: maybeUser.id,
+      claimTokenEnding: claimToken.slice(-4),
+    });
     return maybeUser;
   }
 
@@ -75,10 +85,19 @@ export function addWCAUser(wcaAccountInfo: WCAAccountInfo): TwizzleUser {
 
 export function addUser(user: TwizzleUser): void {
   tables.users.set(user.id, user);
+  usersLog.log({
+    event: "user-add",
+    userID: user.id,
+    wcaUserInfo: user.wcaAccountInfo.wcaUserInfo,
+  });
   tables.tokenIndex.set(user.twizzleAccessToken, user.id);
 }
 
 export function removeUser(user: TwizzleUser): void {
+  usersLog.log({
+    event: "user-remove",
+    userID: user.id,
+  });
   // TODO: Error handling in case one/both fails?
   tables.users.delete(user.id);
   tables.tokenIndex.delete(user.twizzleAccessToken);
@@ -88,5 +107,10 @@ export function removeUser(user: TwizzleUser): void {
 export function createClaimToken(user: TwizzleUser): ClaimToken {
   const claimToken = newClaimToken();
   tables.claimIndex.set(claimToken, user.id);
+  usersLog.log({
+    event: "claim-create",
+    userID: user.id,
+    claimTokenEnding: claimToken.slice(-4),
+  });
   return claimToken;
 }
