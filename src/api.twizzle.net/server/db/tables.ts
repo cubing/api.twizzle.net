@@ -3,17 +3,9 @@ import {
   TwizzleAccessToken,
   TwizzleUserID,
 } from "../../common/auth.ts";
-import { WCA_ID, WCAAccountID, WCAAccountInfo } from "../../common/wca.ts";
-import {
-  newClaimToken,
-  newTwizzleAccessToken,
-  newTwizzleUserID,
-} from "../identifiers.ts";
-
 // import googleCloudDatastore from "https://cdn.skypack.dev/@google-cloud/datastore";
 import Storage from "../../vendor/Storage.js";
 import { TwizzleUser } from "./TwizzleUser.ts";
-import { ensureDirSync } from "https://deno.land/std@0.85.0/fs/ensure_dir.ts";
 
 class StorageBackedMap<K extends string, V> {
   storage: Storage;
@@ -34,7 +26,6 @@ class StorageBackedMap<K extends string, V> {
   }
 }
 
-ensureDirSync("./data");
 const users: StorageBackedMap<TwizzleUserID, TwizzleUser> =
   new StorageBackedMap<
     TwizzleUserID,

@@ -1,4 +1,5 @@
 import { ensureDirSync } from "https://deno.land/std@0.85.0/fs/ensure_dir.ts";
+import { dirname } from "https://deno.land/std@0.85.0/path/mod.ts";
 
 const BUFFER_DURATION_MS = 10 * 1000;
 
@@ -8,6 +9,7 @@ export class BufferedLogFile {
   activeTimeout: number | null = null;
 
   constructor(private filename: string) {
+    ensureDirSync(dirname(filename));
   }
 
   // deno-lint-ignore no-explicit-any
@@ -30,11 +32,10 @@ export class BufferedLogFile {
     this.activeTimeout = null;
   }
 }
-ensureDirSync("./data/log/main");
+
 export const mainErrorLog = new BufferedLogFile(
   `./data/log/error.log`,
 );
-ensureDirSync("./data/log/main");
 
 export const mainInfoLog = new BufferedLogFile(
   `./data/log/info.log`,

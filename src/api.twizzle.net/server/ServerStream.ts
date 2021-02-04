@@ -1,4 +1,3 @@
-import { ensureDirSync } from "https://deno.land/std@0.85.0/fs/mod.ts";
 import { WebSocket } from "https://deno.land/std@0.85.0/ws/mod.ts";
 import { TwizzleUserID } from "../common/auth.ts";
 import { twizzleError, twizzleLog } from "../common/log.ts";
@@ -15,8 +14,6 @@ import { BufferedLogFile } from "./BufferedLogFile.ts";
 import { TwizzleUser } from "./db/TwizzleUser.ts";
 import { newClientID, newStreamID } from "./identifiers.ts";
 const STREAM_TIMEOUT_MS = 10 * 60 * 1000;
-
-ensureDirSync("./data/log/streams");
 
 class ServerStreamClient {
   clientID: ClientID = newClientID();
