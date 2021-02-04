@@ -15,7 +15,8 @@ type MoveListener = (moveEvent: MoveEvent) => void;
 type OrientationListener = (orientationEvent: OrientationEvent) => void;
 type ResetListener = (resetEvent: ResetEvent) => void;
 
-// TODO: distingiush send/receive from credentialed/anonymous
+// TODO: distingiush send/receive from credentialed/anonymous, so that we can
+// auth logged-in listeners (and prioritize them when under DOS)
 // TODO: make into enum
 type StreamAuthMode = "credential" | "anonymous";
 

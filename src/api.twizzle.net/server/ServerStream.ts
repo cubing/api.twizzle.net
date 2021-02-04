@@ -111,14 +111,15 @@ export class ServerStream {
     if (clientIsPermittedToSend) {
       this.clearPendingTimeout();
     } else {
-      if (this.#lastMoveMessage) {
-        this.sendToClient(client, this.#lastMoveMessage);
+      // Send the reset event first, so it doesn't clobber the others.
+      if (this.#lastResetMessage) {
+        this.sendToClient(client, this.#lastResetMessage);
       }
       if (this.#lastOrientationMessage) {
         this.sendToClient(client, this.#lastOrientationMessage);
       }
-      if (this.#lastResetMessage) {
-        this.sendToClient(client, this.#lastResetMessage);
+      if (this.#lastMoveMessage) {
+        this.sendToClient(client, this.#lastMoveMessage);
       }
     }
 
