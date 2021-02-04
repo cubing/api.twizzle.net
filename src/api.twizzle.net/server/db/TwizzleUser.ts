@@ -5,7 +5,7 @@ import {
   TwizzleUserID,
 } from "../../common/auth.ts";
 import { TwizzleUserPublicInfo } from "../../common/user.ts";
-import { WCAAccountInfo } from "../../common/wca.ts";
+import { WCA_ID, WCAAccountID, WCAAccountInfo } from "../../common/wca.ts";
 import { BufferedLogFile } from "../BufferedLogFile.ts";
 import {
   newClaimToken,
@@ -31,7 +31,7 @@ export class TwizzleUser {
   // TODO: use models better
   static publicInfo(id: TwizzleUserID): TwizzleUserPublicInfo {
     const fullInfo = tables.users.get(id);
-    console.log({ fullInfo });
+    // console.log({ fullInfo });
     const wcaID = fullInfo.wcaAccountInfo.wcaUserInfo.wca_id;
     const name = `${fullInfo.wcaAccountInfo.wcaUserInfo.name} (${wcaID ??
       "unverified"})`;
@@ -42,7 +42,21 @@ export class TwizzleUser {
     };
   }
 
-  static findByClaimCoken(claimToken: ClaimToken): TwizzleUser | null {
+  static findByWCAAccountID(wcaAccountID: WCAAccountID): TwizzleUser | null {
+    const maybeUserID = tables.wcaAccountIDIndex.get(wcaAccountID.toString());
+    console.log("\n\nAA", maybeUserID);
+    if (!maybeUserID) {
+      return null;
+    }
+    const maybeUser = tables.users.get(maybeUserID);
+    console.log("CCCCCC", maybeUser?.id);
+    if (!maybeUser) {
+      return null;
+    }
+    return maybeUser;
+  }
+
+  static findByClaimToken(claimToken: ClaimToken): TwizzleUser | null {
     const maybeUserID = tables.claimIndex.get(claimToken);
     if (!maybeUserID) {
       return null;
@@ -91,6 +105,10 @@ export function addUser(user: TwizzleUser): void {
     wcaUserInfo: user.wcaAccountInfo.wcaUserInfo,
   });
   tables.tokenIndex.set(user.twizzleAccessToken, user.id);
+  const wcaAccountID = user.wcaAccountInfo.wcaUserInfo.id;
+  if (wcaAccountID) {
+    tables.wcaAccountIDIndex.set(wcaAccountID.toString(), user.id);
+  }
 }
 
 export function removeUser(user: TwizzleUser): void {

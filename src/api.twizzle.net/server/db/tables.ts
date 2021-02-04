@@ -3,7 +3,7 @@ import {
   TwizzleAccessToken,
   TwizzleUserID,
 } from "../../common/auth.ts";
-import { WCAAccountInfo } from "../../common/wca.ts";
+import { WCA_ID, WCAAccountID, WCAAccountInfo } from "../../common/wca.ts";
 import {
   newClaimToken,
   newTwizzleAccessToken,
@@ -48,9 +48,15 @@ const claimIndex: StorageBackedMap<ClaimToken, TwizzleUserID> =
     ClaimToken,
     TwizzleUserID
   >("./data/claimIndex.json");
+const wcaAccountIDIndex: StorageBackedMap<string, TwizzleUserID> =
+  new StorageBackedMap<
+    string,
+    TwizzleUserID
+  >("./data/wcaAccountIDIndex.json");
 
 export const tables = {
   users,
   tokenIndex,
   claimIndex,
+  wcaAccountIDIndex,
 };

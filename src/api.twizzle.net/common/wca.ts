@@ -1,5 +1,6 @@
 // deno-lint-ignore-file  camelcase
 import { prod } from "./config.ts";
+import { twizzleLog } from "./log.ts";
 
 function TWIZZLE_WCA_CLIENT_ID(): string {
   return prod()
@@ -13,6 +14,7 @@ function TWIZZLE_WCA_OAUTH_REDIRECT_URI(): string {
 }
 
 export type WCAAccountID = number;
+export type WCA_ID = string;
 
 export interface WCAAuthInfo {
   access_token: string;
@@ -83,7 +85,7 @@ export async function wcaGetToken(
 
   const wcaAuthInfo: WCAAuthInfo =
     await (await fetch(wcaTokenURL.toString(), { method: "POST" })).json();
-  console.log(wcaAuthInfo);
+  twizzleLog(wcaAuthInfo);
 
   const wcaUserInfo: WCAUserInfo =
     (await (await fetch("https://www.worldcubeassociation.org/api/v0/me", {
@@ -93,7 +95,11 @@ export async function wcaGetToken(
       },
     })).json()).me;
 
-  // console.log(wcaUserInfo);
+  console.log(
+    "fetched WCA user info for",
+    wcaUserInfo.name,
+    wcaUserInfo.wca_id,
+  );
 
   return { wcaAuthInfo, wcaUserInfo };
 }

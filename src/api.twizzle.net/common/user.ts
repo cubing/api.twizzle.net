@@ -1,8 +1,9 @@
 import type { TwizzleAccessToken, TwizzleUserID } from "./auth.ts";
+import { WCA_ID } from "./wca.ts";
 
 export interface TwizzleUserPublicInfo {
   twizzleUserID: TwizzleUserID;
-  wcaID: string | null;
+  wcaID: WCA_ID | null;
   name: string;
 }
 

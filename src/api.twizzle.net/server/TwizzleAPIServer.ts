@@ -231,7 +231,7 @@ export class TwizzleAPIServer {
       });
       return;
     }
-    const maybeUser = TwizzleUser.findByClaimCoken(maybeClaimToken);
+    const maybeUser = TwizzleUser.findByClaimToken(maybeClaimToken);
     if (!maybeUser) {
       request.respond({
         status: 401,
@@ -274,7 +274,13 @@ export class TwizzleAPIServer {
       maybeCode,
       TWIZZLE_WCA_APPLICATION_CLIENT_SECRET,
     );
-    const user = addWCAUser(accountInfo);
+    console.log(
+      "accountInfo.wcaUserInfo.wca_id;",
+      accountInfo.wcaUserInfo.wca_id,
+    );
+    const user: TwizzleUser = (accountInfo.wcaUserInfo.id &&
+      TwizzleUser.findByWCAAccountID(accountInfo.wcaUserInfo.id)) ||
+      addWCAUser(accountInfo);
     const url = new URL(CLIENT_APP_URL()); // TODO: return_to?
     url.searchParams.set("claimToken", createClaimToken(user));
     request.respond({
