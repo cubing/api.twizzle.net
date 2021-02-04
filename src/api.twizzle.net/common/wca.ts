@@ -23,6 +23,10 @@ export interface WCAAuthInfo {
   refresh_token: string;
   scope: "public";
   create_at: number; // unix seconds
+
+  // TOD: Make this a separate time?
+  error?: string;
+  error_description?: string;
 }
 
 export interface WCAUserInfo {
@@ -59,7 +63,7 @@ export function wcaOAuthStartURL(): string {
 export async function wcaGetToken(
   code: string,
   wcaApplicationClientSecret: string,
-): Promise<WCAAccountInfo> {
+): Promise<WCAAccountInfo | null> {
   const wcaTokenURL = new URL(
     "https://www.worldcubeassociation.org/oauth/token",
   );
@@ -85,7 +89,19 @@ export async function wcaGetToken(
 
   const wcaAuthInfo: WCAAuthInfo =
     await (await fetch(wcaTokenURL.toString(), { method: "POST" })).json();
-  twizzleLog(wcaAuthInfo);
+
+  if (!wcaAuthInfo || wcaAuthInfo.error_description) {
+    console.log(
+      "failed to fetch WCA user info for a user",
+      wcaAuthInfo.error_description,
+    );
+    return null;
+  }
+  console.log(
+    "fetched WCA user info for a user",
+    wcaAuthInfo,
+  );
+  // twizzleLog(this, wcaAuthInfo);
 
   const wcaUserInfo: WCAUserInfo =
     (await (await fetch("https://www.worldcubeassociation.org/api/v0/me", {
@@ -97,9 +113,13 @@ export async function wcaGetToken(
 
   console.log(
     "fetched WCA user info for",
-    wcaUserInfo.name,
-    wcaUserInfo.wca_id,
+    wcaUserInfo?.name,
+    wcaUserInfo?.wca_id,
   );
+
+  if (!wcaUserInfo) {
+    return null;
+  }
 
   return { wcaAuthInfo, wcaUserInfo };
 }

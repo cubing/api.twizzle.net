@@ -230,6 +230,7 @@ function clearStreamSelectors(message?: string) {
     const startSending = async (stream: Stream): Promise<void> => {
       console.log("Starting stream:", stream);
 
+      await stream.disconnect(); // TODO: this is a workaround for if we have an anon connection
       await stream.connect();
       currentSendingStream = stream;
     };
@@ -250,15 +251,16 @@ function clearStreamSelectors(message?: string) {
         if (sending) {
           startSending(stream);
         } else {
-          await stream.connect({streamAuthMode: "anonymous"});
+          await stream.disconnect(); // in case we were authed
+          await stream.connect({ streamAuthMode: "anonymous" });
+          currentSendingStream = null;
           resetPuzzle();
           let firstEvent = true;
           const playerMoveMonoplexListener = playerMoveMonoplexer
             .newMonoplexListener();
           const playerOriMonoplexListener = playerOriMonoplexer
             .newMonoplexListener();
-          const playerResetMonoplexListener = playerResetMonoplexer
-            .newMonoplexListener();
+          const playerResetMonoplexListener = playerResetMonoplexer.newMonoplexListener();
           stream.addMoveListener((binaryMoveEvent: BinaryMoveEvent) => {
             if (
               playerMoveMonoplexer.currentMonoplexListener !==

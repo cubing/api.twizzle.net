@@ -286,11 +286,16 @@ export class TwizzleAPIServer {
       maybeCode,
       TWIZZLE_WCA_APPLICATION_CLIENT_SECRET,
     );
-    console.log(
-      "accountInfo.wcaUserInfo.wca_id;",
-      accountInfo.wcaUserInfo.wca_id,
-    );
-    const user: TwizzleUser = (accountInfo.wcaUserInfo.id &&
+    if (accountInfo === null) {
+      request.respond({
+        status: 403,
+        headers,
+        body: "Could not get WCA info. Please start over.",
+      });
+      return;
+    }
+
+    const user: TwizzleUser = (accountInfo.wcaUserInfo?.id &&
       TwizzleUser.findByWCAAccountID(accountInfo.wcaUserInfo.id)) ||
       addWCAUser(accountInfo);
     const url = new URL(CLIENT_APP_URL()); // TODO: return_to?

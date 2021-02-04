@@ -115,6 +115,7 @@ export class Stream {
     const webSocketPromise = this.#webSocket;
     this.#webSocket = null;
     (await webSocketPromise)?.close();
+    this.#connnected = false;
   }
 
   // TODO: remove `any`
