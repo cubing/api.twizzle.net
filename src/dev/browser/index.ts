@@ -3,6 +3,8 @@ import { BareBlockMove } from "cubing/alg";
 import { TwistyPlayer } from "cubing/twisty";
 import { TwizzleAPIClient } from "../../api.twizzle.net/client/index.ts";
 
+console.log("NODE_ENV:", process.env.NODE_ENV);
+
 const client = new TwizzleAPIClient("http://127.0.0.1", localStorage);
 
 (window as any).client = client;

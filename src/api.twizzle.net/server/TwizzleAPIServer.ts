@@ -20,11 +20,8 @@ import {
   CLIENT_APP_URL,
   TWIZZLE_WCA_APPLICATION_CLIENT_SECRET,
 } from "./config.ts";
-import { ServerStream } from "./ServerStream.ts";
 import { addWCAUser, createClaimToken, TwizzleUser } from "./db/TwizzleUser.ts";
-import { TWIZZLE_PROD } from "../common/config.ts";
-
-console.info(`Running ${TWIZZLE_PROD ? "prod" : "dev"} server.`);
+import { ServerStream } from "./ServerStream.ts";
 
 export const PORT = 4444;
 
@@ -35,7 +32,7 @@ export class TwizzleAPIServer {
 
   restServer: Server;
   constructor() {
-    twizzleLog(this, "starting REST server on port:", PORT);
+    twizzleLog(this, "starting server on port:", PORT);
     this.restServer = serve({ hostname: "0.0.0.0", port: PORT });
     this.restServerLoop();
   }
@@ -275,7 +272,7 @@ export class TwizzleAPIServer {
       TWIZZLE_WCA_APPLICATION_CLIENT_SECRET,
     );
     const user = addWCAUser(accountInfo);
-    const url = new URL(CLIENT_APP_URL); // TODO: return_to?
+    const url = new URL(CLIENT_APP_URL()); // TODO: return_to?
     url.searchParams.set("claimToken", createClaimToken(user));
     request.respond({
       status: 302,

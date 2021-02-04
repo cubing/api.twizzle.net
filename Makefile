@@ -6,7 +6,7 @@ dev:
 
 .PHONY: prod
 prod:
-	env TWIZZLE_PROD=1 deno run $(DENO_FLAGS) ./src/prod/serve.ts
+	deno run $(DENO_FLAGS) ./src/prod/serve.ts
 
 .PHONY: dev-client
 dev-client:

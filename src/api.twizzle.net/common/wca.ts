@@ -1,13 +1,16 @@
 // deno-lint-ignore-file  camelcase
+import { prod } from "./config.ts";
 
-import { TWIZZLE_PROD } from "../common/config.ts";
-
-const TWIZZLE_WCA_CLIENT_ID = TWIZZLE_PROD
-  ? "bnd4XCq3i0e4OesB_ML8YuuwIFLdIhQ19aXDv8su3p0"
-  : "3GaLUmFKGG-61B1KTmkJnu2NWNbCmuKANvRuAcwKM-E";
-const TWIZZLE_WCA_OAUTH_REDIRECT_URI = Deno.env.get("TWIZZLE_WCA_REDIRECT_URI")
-  ? "https://api.twizzle.net/v0/auth/wca/oauth_callback"
-  : "http://localhost:4444/v0/auth/wca/oauth_callback";
+function TWIZZLE_WCA_CLIENT_ID(): string {
+  return prod()
+    ? "bnd4XCq3i0e4OesB_ML8YuuwIFLdIhQ19aXDv8su3p0"
+    : "3GaLUmFKGG-61B1KTmkJnu2NWNbCmuKANvRuAcwKM-E";
+}
+function TWIZZLE_WCA_OAUTH_REDIRECT_URI(): string {
+  return prod()
+    ? "https://api.twizzle.net/v0/auth/wca/oauth_callback"
+    : "http://localhost:4444/v0/auth/wca/oauth_callback";
+}
 
 export type WCAAccountID = number;
 
@@ -44,8 +47,8 @@ export interface WCAAccountInfo {
 
 export function wcaOAuthStartURL(): string {
   const url = new URL("https://www.worldcubeassociation.org/oauth/authorize");
-  url.searchParams.set("client_id", TWIZZLE_WCA_CLIENT_ID);
-  url.searchParams.set("redirect_uri", TWIZZLE_WCA_OAUTH_REDIRECT_URI);
+  url.searchParams.set("client_id", TWIZZLE_WCA_CLIENT_ID());
+  url.searchParams.set("redirect_uri", TWIZZLE_WCA_OAUTH_REDIRECT_URI());
   url.searchParams.set("response_type", "code");
   url.searchParams.set("scope", "");
   return url.toString();
@@ -61,7 +64,7 @@ export async function wcaGetToken(
   wcaTokenURL.searchParams.set("grant_type", "authorization_code");
   wcaTokenURL.searchParams.set(
     "client_id",
-    TWIZZLE_WCA_CLIENT_ID,
+    TWIZZLE_WCA_CLIENT_ID(),
   );
   wcaTokenURL.searchParams.set(
     "client_secret",
@@ -73,7 +76,7 @@ export async function wcaGetToken(
   );
   wcaTokenURL.searchParams.set(
     "redirect_uri",
-    TWIZZLE_WCA_OAUTH_REDIRECT_URI,
+    TWIZZLE_WCA_OAUTH_REDIRECT_URI(),
   );
 
   console.log(wcaTokenURL.toString());

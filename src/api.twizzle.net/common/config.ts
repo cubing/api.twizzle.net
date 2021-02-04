@@ -1,1 +1,10 @@
-export const TWIZZLE_PROD: boolean = Deno.env.get("TWIZZLE_PROD") === "1";
+let twizzleProd = false;
+
+export function setProd(newTwizzleProd: boolean): void {
+  console.info("Setting prod flag:", newTwizzleProd);
+  twizzleProd = newTwizzleProd;
+}
+
+export function prod(): boolean {
+  return twizzleProd;
+}

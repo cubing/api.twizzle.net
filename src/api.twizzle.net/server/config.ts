@@ -1,4 +1,4 @@
-import { TWIZZLE_PROD } from "../common/config.ts";
+import { prod } from "../common/config.ts";
 
 export const TWIZZLE_WCA_APPLICATION_CLIENT_SECRET = Deno.env.get(
   "TWIZZLE_WCA_APPLICATION_CLIENT_SECRET",
@@ -11,6 +11,6 @@ if (!TWIZZLE_WCA_APPLICATION_CLIENT_SECRET) {
   Deno.exit(1);
 }
 
-export const CLIENT_APP_URL = TWIZZLE_PROD
-  ? "https://twizzle.net/stream/"
-  : "http://localhost:1234/";
+export function CLIENT_APP_URL(): string {
+  return prod() ? "https://twizzle.net/stream/" : "http://localhost:1234/";
+}
