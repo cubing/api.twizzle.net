@@ -1,21 +1,20 @@
-import { ensureDir } from "https://deno.land/std@0.85.0/fs/ensure_dir.ts";
+import { ensureDirSync } from "https://deno.land/std@0.85.0/fs/ensure_dir.ts";
 import {
   ClaimToken,
   TwizzleAccessToken,
   TwizzleUserID,
 } from "../../common/auth.ts";
 import { TwizzleUserPublicInfo } from "../../common/user.ts";
-import { WCA_ID, WCAAccountID, WCAAccountInfo } from "../../common/wca.ts";
+import { WCAAccountID, WCAAccountInfo } from "../../common/wca.ts";
 import { BufferedLogFile } from "../BufferedLogFile.ts";
 import {
   newClaimToken,
   newTwizzleAccessToken,
   newTwizzleUserID,
 } from "../identifiers.ts";
-
 import { tables } from "./tables.ts";
 
-ensureDir("./data/log/users");
+ensureDirSync("./data/log/users");
 const usersLog = new BufferedLogFile("./data/log/users/users.log");
 
 export class TwizzleUser {

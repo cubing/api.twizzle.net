@@ -13,10 +13,7 @@ import {
 // import googleCloudDatastore from "https://cdn.skypack.dev/@google-cloud/datastore";
 import Storage from "../../vendor/Storage.js";
 import { TwizzleUser } from "./TwizzleUser.ts";
-import {
-  ensureDir,
-  ensureDirSync,
-} from "https://deno.land/std@0.85.0/fs/ensure_dir.ts";
+import { ensureDirSync } from "https://deno.land/std@0.85.0/fs/ensure_dir.ts";
 
 class StorageBackedMap<K extends string, V> {
   storage: Storage;
