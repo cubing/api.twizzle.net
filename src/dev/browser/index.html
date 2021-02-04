@@ -27,7 +27,8 @@
     grid-area: "controls";
     border-left: 1px solid rgba(0, 0, 0, 0.25);
     box-sizing: border-box;
-    overflow-y: scroll;
+    overflow: hidden;
+    overflow-y: auto;
   }
   h2 {
     margin: 0;
@@ -40,6 +41,9 @@
   #controls > div {
     margin: 1em 1em;
   }
+  #controls > #selectors {
+    margin: 1em 0.5em;
+  }
   #connect, #manage-stream {
     display: grid;
     gap: 0.25em;
@@ -47,10 +51,14 @@
   .stream-selector {
     display: block;
     color: inherit;
-    padding: 0.25em 0;
+    padding: 0.25em 0.5em;
+  }
+  .stream-selector.current {
+    background: rgba(66, 133, 244);
+    color: white;
   }
   .stream-selector:hover {
-    background: #4285f4;
+    background: rgba(66, 133, 244, 0.8);
     color: white;
   }
 </style>
@@ -61,7 +69,12 @@
     <div id="sign-in"></div>
     <div id="connect"></div>
     <div id="manage-stream"></div>
-    <div id="selectors"></div>
+    <div>My streams:
+    <div id="stream-list-mine" class="stream-list"></div>
+    </div>
+    <div>Other stream:
+    <div id="stream-list-others" class="stream-list"></div>
+    </div>
   </div>
 </body>
 </html>

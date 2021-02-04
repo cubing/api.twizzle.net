@@ -31,7 +31,15 @@ const viewerElem = document.querySelector("#viewer");
 const signInElem = document.querySelector("#sign-in");
 const connectElem = document.querySelector("#connect");
 const manageStreamElem = document.querySelector("#manage-stream");
-const selectorsElem = document.querySelector("#selectors");
+const streamListMineElem = document.querySelector("#stream-list-mine");
+const streamListOthersElem = document.querySelector("#stream-list-others");
+
+let currentStreamElem: Element | null = null;
+function setCurrentStreamElem(elem: Element): void {
+  currentStreamElem?.classList.remove("current");
+  elem.classList.add("current");
+  currentStreamElem = elem;
+}
 
 const twistyPlayer = viewerElem.appendChild(
   new TwistyPlayer({
@@ -135,6 +143,11 @@ function sameStates(
 
 const defPromise = cube3x3x3.def();
 
+function clearStreamSelectors(message?: string) {
+  streamListMineElem.textContent = "";
+  streamListOthersElem.textContent = message ?? "";
+}
+
 (async () => {
   if (client.authenticated()) {
     signInElem.appendChild(document.createElement("span")).textContent =
@@ -145,7 +158,7 @@ const defPromise = cube3x3x3.def();
     signInElem.appendChild(document.createElement("br"));
     const a = signInElem.appendChild(document.createElement("a"));
     a.href = client.wcaAuthURL();
-    a.textContent = "(change)";
+    a.textContent = "(sign in again)";
   } else {
     const a = signInElem.appendChild(document.createElement("a"));
     a.href = client.wcaAuthURL();
@@ -153,8 +166,6 @@ const defPromise = cube3x3x3.def();
   }
   // selectors.appendChild(document.createElement("br"));
   // selectors.appendChild(document.createElement("br"));
-
-  const streamList = selectorsElem.appendChild(document.createElement("div"));
 
   const url = new URL(location.href);
   const maybeClaimToken = url.searchParams.get("claimToken");
@@ -164,71 +175,103 @@ const defPromise = cube3x3x3.def();
     window.history.pushState({}, "", url.toString());
   }
   try {
-    const streams = await client.streams();
-    console.log(streams);
+    const streams: Stream[] = await client.streams();
 
     if (streams.length === 0) {
-      streamList.appendChild(document.createElement("div")).textContent =
-        "No active streams.";
+      clearStreamSelectors("No active streams.");
+      return;
     }
+    clearStreamSelectors();
 
     const def = await defPromise;
+
+    async function resetPuzzle(): Promise<void> {
+      twistyPlayer.alg = new Sequence([]);
+      twistyPlayer.experimentalSetStartStateOverride(def.startPieces);
+
+      if (keyboardPuzzle !== null) {
+        resetCamera({ resetToNonTracking: true });
+        (await keyboardPuzzle.puzzle).reset();
+      }
+      if (smartPuzzle !== null) {
+        resetCamera();
+        if (
+          (smartPuzzle as GoCube | { resetOrientation?: () => void })
+            .resetOrientation
+        ) {
+          (smartPuzzle as
+            | GoCube
+            | { resetOrientation?: () => void }).resetOrientation();
+        }
+        if ((smartPuzzle as GanCube | { reset?: () => void }).reset) {
+          (smartPuzzle as GanCube | { reset?: () => void }).reset();
+        }
+      }
+    }
 
     const startSending = async (stream: Stream): Promise<void> => {
       console.log("Starting stream:", stream);
 
       await stream.connect();
       currentStream = stream;
-      manageStreamElem.textContent = "";
-      manageStreamElem.appendChild(document.createElement("span"))
-        .textContent = `Stream: 0x${stream.streamID.slice(-2)}`;
     };
 
-    for (const stream of streams) {
-      const a = streamList.appendChild(document.createElement("a"));
+    function addStreamButton(elem: Element, stream: Stream): Element {
+      const a = document.createElement("a");
+      elem.prepend(a);
       a.classList.add("stream-selector");
       a.href = "#";
-      a.textContent = `${stream.streamInfo.senders[0]?.name ??
-        "<unknown stream>"} 0x${stream.streamID.slice(-2)}`;
+      a.textContent = `${
+        stream.streamInfo.senders[0]?.name ?? "<unknown stream>"
+      } 0x${stream.streamID.slice(-2)}`;
       a.addEventListener("click", async (e: Event) => {
         e.preventDefault();
         if (stream.permittedToSend()) {
           startSending(stream);
         } else {
           await stream.connect();
-          resetTwistyPlayer();
+          resetPuzzle();
           let firstEvent = true;
-          const playerMoveMonoplexListener = playerMoveMonoplexer
-            .newMonoplexListener();
-          const playerOriMonoplexListener = playerOriMonoplexer
-            .newMonoplexListener();
+          const playerMoveMonoplexListener = playerMoveMonoplexer.newMonoplexListener();
+          const playerOriMonoplexListener = playerOriMonoplexer.newMonoplexListener();
           stream.addMoveListener((binaryMoveEvent: BinaryMoveEvent) => {
             if (
               playerMoveMonoplexer.currentMonoplexListener !==
-                playerMoveMonoplexListener
+              playerMoveMonoplexListener
             ) {
               return;
             }
 
             const moveEvent = mutateToTransformation(binaryMoveEvent);
             if (firstEvent) {
-              twistyPlayer.experimentalSetStartStateOverride(moveEvent.state);
+              twistyPlayer.experimentalSetStartStateOverride(
+                moveEvent.state
+              );
               firstEvent = false;
             } else {
               playerMoveMonoplexListener(moveEvent);
               if (!sameStates(def, twistyPlayer, moveEvent)) {
                 twistyPlayer.alg = new Sequence([]);
-                twistyPlayer.experimentalSetStartStateOverride(moveEvent.state);
+                twistyPlayer.experimentalSetStartStateOverride(
+                  moveEvent.state
+                );
               }
             }
           });
           stream.addOrientationListener(
             (orientationEvent: OrientationEvent) => {
               playerOriMonoplexListener(orientationEvent);
-            },
+            }
           );
         }
+        setCurrentStreamElem(a);
       });
+      return a;
+    }
+
+    for (const stream of streams) {
+      const elem = stream.permittedToSend() ? streamListMineElem : streamListOthersElem;
+      addStreamButton(elem, stream)
     }
     const connectKeyboardButton = connectElem.appendChild(
       document.createElement("button"),
@@ -249,6 +292,7 @@ const defPromise = cube3x3x3.def();
         return;
       }
       smartPuzzle = null;
+      resetPuzzle()
       connectKeyboardButton.textContent = "✅ Connected keyboard!";
       connectSmartPuzzleButton.textContent = "Connect smart cube";
       keyboardPuzzle.addMoveListener(playerMoveMonoplexer.newMonoplexListener());
@@ -270,10 +314,11 @@ const defPromise = cube3x3x3.def();
         console.error(e);
         return;
       }
-      keyboardPuzzle = null;
+      keyboardPuzzle = null; // TODO: implement disconnection
       connectSmartPuzzleButton.textContent = "✅ Connected to smart cube";
       connectKeyboardButton.textContent = "Connect keyboard";
       smartCubeKPuzzle.reset();
+      resetPuzzle();
       const playerMoveMonoplexListener = playerMoveMonoplexer
         .newMonoplexListener();
       const streamMoveMonoplexListener = streamMoveMonoplexer
@@ -297,28 +342,7 @@ const defPromise = cube3x3x3.def();
       document.createElement("button")
     );
     resetPuzzleButton.textContent = "Reset cube";
-    resetPuzzleButton.addEventListener("click", async () => {
-      if (keyboardPuzzle !== null) {
-        resetCamera({ resetToNonTracking: true });
-        twistyPlayer.alg = new Sequence([]);
-        (await keyboardPuzzle.puzzle).reset()
-      }
-      if (smartPuzzle !== null) {
-        twistyPlayer.alg = new Sequence([]);
-        resetCamera();
-        if (
-          (smartPuzzle as GoCube | { resetOrientation?: () => void })
-            .resetOrientation
-        ) {
-          (smartPuzzle as
-            | GoCube
-            | { resetOrientation?: () => void }).resetOrientation();
-        }
-        if ((smartPuzzle as GanCube | { reset?: () => void }).reset) {
-          (smartPuzzle as GanCube | { reset?: () => void }).reset();
-        }
-      }
-    })
+    resetPuzzleButton.addEventListener("click", resetPuzzle);
     if (client.authenticated()) {
       const startStreamButton = manageStreamElem.appendChild(
         document.createElement("button"),
@@ -327,12 +351,12 @@ const defPromise = cube3x3x3.def();
 
       startStreamButton.addEventListener("click", async () => {
         const sendingStream = await client.createStream();
+        setCurrentStreamElem(addStreamButton(streamListMineElem, sendingStream));
         startSending(sendingStream);
       });
     }
   } catch (e) {
     console.error(e);
-    streamList.appendChild(document.createElement("div")).textContent =
-      "Cannot get stream info.";
+    clearStreamSelectors("Cannot get stream info.");
   }
 })();
