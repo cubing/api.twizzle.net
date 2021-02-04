@@ -1,9 +1,13 @@
-import { BareBlockMove } from "cubing/alg";
-import { debugKeyboardConnect } from "cubing/bluetooth";
+import { Sequence } from "cubing/alg";
+import { debugKeyboardConnect, MoveEvent } from "cubing/bluetooth";
+import { EquivalentStates, KPuzzleDefinition } from "cubing/kpuzzle";
+import { cube3x3x3 } from "cubing/puzzles";
 import { TwistyPlayer } from "cubing/twisty";
-import { TwizzleAPIClient } from "../../api.twizzle.net/client/index.ts";
-import { MoveEvent, Stream } from "../../api.twizzle.net/client/Stream.ts";
-import { prod, setProd } from "../../api.twizzle.net/common/config.ts";
+import { TwizzleAPIClient } from "../../api.twizzle.net/client/index";
+import { Stream } from "../../api.twizzle.net/client/Stream";
+import { prod, setProd } from "../../api.twizzle.net/common/config";
+import { BinaryMoveEvent } from "../../api.twizzle.net/common/stream";
+import { mutateToBinary, mutateToTransformation } from "./binary";
 
 setProd(process.env.NODE_ENV === "production");
 // console.log("NODE_ENV:", process.env.NODE_ENV);
@@ -19,7 +23,7 @@ const manageStreamElem = document.querySelector("#manage-stream");
 const selectorsElem = document.querySelector("#selectors");
 
 // TODO: reuse by resetting listeners
-let cachedTwistyPlayer: TwistPlayer;
+let cachedTwistyPlayer: TwistyPlayer;
 function resetTwistyPlayer(): TwistyPlayer {
   viewerElem.textContent = "";
   return cachedTwistyPlayer = viewerElem.appendChild(
@@ -28,6 +32,23 @@ function resetTwistyPlayer(): TwistyPlayer {
     }),
   );
 }
+
+function sameStates(
+  def: KPuzzleDefinition,
+  twistyPlayer: TwistyPlayer,
+  moveEvent: MoveEvent,
+): boolean {
+  const indexer = (twistyPlayer.cursor as any).todoIndexer; // TODO: unhackify
+  const playerState = indexer
+    .stateAtIndex(
+      indexer.numMoves() + 1,
+      (twistyPlayer.cursor as any).startState, // TODO: unhackify
+    );
+
+  return EquivalentStates(def, playerState, moveEvent.state);
+}
+
+const defPromise = cube3x3x3.def();
 
 (async () => {
   if (client.authenticated()) {
@@ -56,7 +77,7 @@ function resetTwistyPlayer(): TwistyPlayer {
   if (maybeClaimToken) {
     await client.claim(maybeClaimToken);
     url.searchParams.delete("claimToken");
-    window.history.pushState({}, "", url);
+    window.history.pushState({}, "", url.toString());
   }
   try {
     const streams = await client.streams();
@@ -66,22 +87,21 @@ function resetTwistyPlayer(): TwistyPlayer {
       streamList.appendChild(document.createElement("div")).textContent =
         "No active streams.";
     }
-    const startSending = async (stream: Stream): void => {
+
+    const def = await defPromise;
+
+    const startSending = async (stream: Stream): Promise<void> => {
       console.log("Starting stream:", stream);
 
       const kb = await debugKeyboardConnect();
       kb.addMoveListener((e: any) => {
-        stream.sendMoveEvent(e);
         cachedTwistyPlayer.experimentalAddMove(e.latestMove);
+        stream.sendMoveEvent(mutateToBinary(e));
       });
       await stream.connect();
       manageStreamElem.textContent = "";
       manageStreamElem.appendChild(document.createElement("span"))
         .textContent = `Stream: 0x${stream.streamID.slice(-2)}`;
-      // sendingStream.sendMoveEvent({
-      //   timestamp: 1,
-      //   move: BareBlockMove("R"),
-      // });
     };
 
     for (const stream of streams) {
@@ -99,12 +119,20 @@ function resetTwistyPlayer(): TwistyPlayer {
           viewerElem.textContent = "";
           const twistyPlayer = resetTwistyPlayer();
           let firstEvent = true;
-          stream.addListener((moveEvent: MoveEvent) => {
+          stream.addListener((binaryMoveEvent: BinaryMoveEvent) => {
+            const moveEvent = mutateToTransformation(binaryMoveEvent);
             if (firstEvent) {
               twistyPlayer.experimentalSetStartStateOverride(moveEvent.state);
               firstEvent = false;
             } else {
               twistyPlayer.experimentalAddMove(moveEvent.latestMove);
+
+              if (sameStates(def, twistyPlayer, moveEvent)) {
+                console.log("same");
+              } else {
+                twistyPlayer.alg = new Sequence([]);
+                twistyPlayer.experimentalSetStartStateOverride(moveEvent.state);
+              }
             }
           });
         }
@@ -126,19 +154,4 @@ function resetTwistyPlayer(): TwistyPlayer {
     streamList.appendChild(document.createElement("div")).textContent =
       "Cannot get stream info.";
   }
-
-  //   // // const streams = await client.streams();
-  //   // // console.log(streams);
-  //   // // const stream = streams[0];
-  //   // // await stream.connect();
-
-  //   // const sendingStream = await client.createStream();
-  //   // console.log({ sendingStream });
-  //   // await sendingStream.connect();
-
-  //   // const listeningStream = (await client.streams()).slice(-1)[0];
-  //   // console.log(listeningStream);
-  //   // await listeningStream.connect();
-
-  //   // console.log("indexing!");
 })();

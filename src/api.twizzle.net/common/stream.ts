@@ -18,3 +18,19 @@ export interface StreamsGETResponse {
 export type StreamsPOSTResponse = {
   stream: StreamInfo;
 };
+
+export interface MoveEvent {
+  // deno-lint-ignore no-explicit-any
+  latestMove: any;
+  timeStamp: number;
+  // deno-lint-ignore no-explicit-any
+  state: any; // string
+}
+
+export interface BinaryMoveEvent {
+  // deno-lint-ignore no-explicit-any
+  latestMove: any;
+  timeStamp: number;
+  // deno-lint-ignore no-explicit-any
+  binaryState: string; // string
+}

@@ -1,17 +1,8 @@
 // import { WebSocket } from "https://deno.land/x/websocket@v0.0.5/mod.ts";
-import { TwizzleAccessToken, TwizzleUserID } from "../common/auth.ts";
 import { twizzleLog } from "../common/log.ts";
-import { StreamID, StreamInfo } from "../common/stream.ts";
-import { TwizzleSessionInfo } from "../common/user.ts";
+import { BinaryMoveEvent } from "../common/stream.ts";
+import { MoveEvent, StreamID, StreamInfo } from "../common/stream.ts";
 import { StoredSessionInfo } from "./StoredSessionInfo.ts";
-
-export interface MoveEvent {
-  // deno-lint-ignore no-explicit-any
-  latestMove: any;
-  timeStamp: number;
-  // deno-lint-ignore no-explicit-any
-  state?: any; // Transformation
-}
 
 type MoveListener = (moveEvent: MoveEvent) => void;
 
@@ -100,7 +91,7 @@ export class Stream {
 
   // TODO: remove `any`
   // deno-lint-ignore no-explicit-any
-  sendMoveEvent(data: { timestamp: number; move: any }): void {
+  sendMoveEvent(data: BinaryMoveEvent): void {
     (async () => {
       if (!this.#webSocket) {
         // TODO: write test
