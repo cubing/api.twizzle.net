@@ -13,7 +13,7 @@ export class BufferedLogFile {
     const now = new Date();
     e.timestampUnixMS = now.getTime();
     e.timestampHuman = now.toString();
-    this.buffer += JSON.stringify(e);
+    this.buffer += JSON.stringify(e) + "\n";
     if (this.activeTimeout === null) {
       this.activeTimeout = setTimeout(this.flush.bind(this));
     }

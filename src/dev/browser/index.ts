@@ -22,16 +22,32 @@ const signInElem = document.querySelector("#sign-in");
 const manageStreamElem = document.querySelector("#manage-stream");
 const selectorsElem = document.querySelector("#selectors");
 
-// TODO: reuse by resetting listeners
-let cachedTwistyPlayer: TwistyPlayer;
-function resetTwistyPlayer(): TwistyPlayer {
-  viewerElem.textContent = "";
-  return cachedTwistyPlayer = viewerElem.appendChild(
-    new TwistyPlayer({
-      controlPanel: "none",
-    }),
-  );
+const twistyPlayer = viewerElem.appendChild(
+  new TwistyPlayer({
+    controlPanel: "none",
+  }),
+);
+
+function resetTwistyPlayer(): void {
+  twistyPlayer.alg = new Sequence([]);
+  twistyPlayer.experimentalSetStartStateOverride(null);
 }
+
+class ListenerMonoplexer {
+  actualListener = (moveEvent: MoveEvent): void => {
+    twistyPlayer.experimentalAddMove(moveEvent.latestMove);
+  };
+  currentMonoplexListener: (moveEvent: MoveEvent) => void = () => {};
+  newMonoplexListener(): (moveEvent: MoveEvent) => void {
+    const proxyListener = (moveEvent: MoveEvent) => {
+      if (proxyListener === this.currentMonoplexListener) {
+        this.actualListener(moveEvent);
+      }
+    };
+    return this.currentMonoplexListener = proxyListener;
+  }
+}
+const listenerMonoplexer = new ListenerMonoplexer();
 
 function sameStates(
   def: KPuzzleDefinition,
@@ -70,7 +86,6 @@ const defPromise = cube3x3x3.def();
   // selectors.appendChild(document.createElement("br"));
 
   const streamList = selectorsElem.appendChild(document.createElement("div"));
-  resetTwistyPlayer();
 
   const url = new URL(location.href);
   const maybeClaimToken = url.searchParams.get("claimToken");
@@ -94,8 +109,9 @@ const defPromise = cube3x3x3.def();
       console.log("Starting stream:", stream);
 
       const kb = await debugKeyboardConnect();
+      const monoplexListener = listenerMonoplexer.newMonoplexListener();
       kb.addMoveListener((e: any) => {
-        cachedTwistyPlayer.experimentalAddMove(e.latestMove);
+        monoplexListener(e);
         stream.sendMoveEvent(mutateToBinary(e));
       });
       await stream.connect();
@@ -116,16 +132,16 @@ const defPromise = cube3x3x3.def();
           startSending(stream);
         } else {
           await stream.connect();
-          viewerElem.textContent = "";
-          const twistyPlayer = resetTwistyPlayer();
+          resetTwistyPlayer();
           let firstEvent = true;
+          const monoplexListener = listenerMonoplexer.newMonoplexListener();
           stream.addListener((binaryMoveEvent: BinaryMoveEvent) => {
             const moveEvent = mutateToTransformation(binaryMoveEvent);
             if (firstEvent) {
               twistyPlayer.experimentalSetStartStateOverride(moveEvent.state);
               firstEvent = false;
             } else {
-              twistyPlayer.experimentalAddMove(moveEvent.latestMove);
+              monoplexListener(moveEvent);
 
               if (sameStates(def, twistyPlayer, moveEvent)) {
                 console.log("same");
