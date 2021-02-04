@@ -14,12 +14,12 @@ setTimeout(async () => {
   // await stream.connect();
   // console.log("stream list", stream.permittedToSend(), stream.connected());
 
-  const listeningStream = (await client.streams())[0];
-  console.log(
-    sendingStream.streamID === listeningStream.streamID,
-    listeningStream.permittedToSend(),
-  );
-  await listeningStream.connect();
+  // const listeningStream = (await client.streams())[0];
+  // console.log(
+  //   sendingStream.streamID === listeningStream.streamID,
+  //   listeningStream.permittedToSend(),
+  // );
+  // await listeningStream.connect();
 
   await sendingStream.connect();
   // sendingStream.sendMoveEvent({

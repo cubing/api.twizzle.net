@@ -175,7 +175,7 @@ export class TwizzleAPIServer {
         stream.toJSON()
       ),
     };
-    console.log({ response });
+    // console.log({ response });
     request.respond({
       status: 200,
       body: JSON.stringify(response),

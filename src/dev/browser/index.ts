@@ -179,7 +179,6 @@ function clearStreamSelectors(message?: string) {
 
     if (streams.length === 0) {
       clearStreamSelectors("No active streams.");
-      return;
     }
     clearStreamSelectors();
 
