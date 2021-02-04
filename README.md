@@ -4,6 +4,7 @@
 
 ```shell
 sudo apt install fish unzip make
+fish
 
 # https://deno.land/manual/getting_started/installation
 curl -fsSL https://deno.land/x/install/install.sh | sh
@@ -14,4 +15,26 @@ curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.155B6D79CA56EA34.ke
 curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/config.deb.txt?distro=debian&version=any-version' | sudo tee -a /etc/apt/sources.list.d/caddy-stable.list
 sudo apt update
 sudo apt install caddy
+
+cd ~/api.twizzle.net/; sudo caddy start
+```
+
+## Running the server
+
+Setup:
+
+```
+fish
+
+mkdir -p ~/secrets
+read -x TWIZZLE_WCA_APPLICATION_CLIENT_SECRET
+echo $TWIZZLE_WCA_APPLICATION_CLIENT_SECRET > ~/secrets/TWIZZLE_WCA_APPLICATION_CLIENT_SECRET.txt
+```
+
+Start:
+
+```shell
+fish
+
+cd ~/api.twizzle.net/; set -x TWIZZLE_WCA_APPLICATION_CLIENT_SECRET (cat ~/secrets/TWIZZLE_WCA_APPLICATION_CLIENT_SECRET.txt) ; pkill make; nohup make prod &
 ```
