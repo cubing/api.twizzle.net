@@ -1,5 +1,5 @@
 import { Sequence } from "cubing/alg";
-import { connect, debugKeyboardConnect, MoveEvent } from "cubing/bluetooth";
+import { BluetoothPuzzle, connect, debugKeyboardConnect, MoveEvent } from "cubing/bluetooth";
 import { EquivalentStates, KPuzzle, KPuzzleDefinition } from "cubing/kpuzzle";
 import { cube3x3x3 } from "cubing/puzzles";
 import { TwistyPlayer } from "cubing/twisty";
@@ -158,22 +158,43 @@ const defPromise = cube3x3x3.def();
     const connectKeyboardButton = connectElem.appendChild(
       document.createElement("button")
     );
-    connectKeyboardButton.textContent = "Connect keyboard";
-    connectKeyboardButton.addEventListener("click", async () => {
-      const keyboardPuzzle = await debugKeyboardConnect();
-      keyboardPuzzle.addMoveListener(playerMonoplexer.newMonoplexListener());
-      keyboardPuzzle.addMoveListener(streamMonoplexer.newMonoplexListener());
-    });
     const connectSmartPuzzleButton = connectElem.appendChild(
       document.createElement("button")
     );
+    connectKeyboardButton.textContent = "Connect keyboard";
+    connectKeyboardButton.addEventListener("click", async () => {
+      connectKeyboardButton.textContent = "⏳ Connecting keyboard";
+      let puzzle: BluetoothPuzzle;
+      try {
+        puzzle = await debugKeyboardConnect();
+        return;
+      } catch (e) {
+        connectSmartPuzzleButton.textContent =
+          "❌ Could not connect to keyboard";
+        console.error(e);
+      }
+      connectKeyboardButton.textContent = "✅ Connected keyboard!";
+      connectSmartPuzzleButton.textContent = "Connect smart cube";
+      puzzle.addMoveListener(playerMonoplexer.newMonoplexListener());
+      puzzle.addMoveListener(streamMonoplexer.newMonoplexListener());
+    });
     connectSmartPuzzleButton.textContent = "Connect smart cube";
     connectSmartPuzzleButton.addEventListener("click", async () => {
-      const bluetoothPuzzle = await connect();
+      connectSmartPuzzleButton.textContent = "⏳ Connecting to smart cube...";
+      let puzzle: BluetoothPuzzle;
+      try {
+        puzzle = await connect(); // TODO: disconnect
+      } catch (e) {
+        connectSmartPuzzleButton.textContent = "❌ Could not connect to smart cube";
+        console.error(e);
+        return;
+      }
+      connectSmartPuzzleButton.textContent = "✅ Connected to smart cube";
+      connectKeyboardButton.textContent = "Connect keyboard";
       const smartCubeKPuzzle = new KPuzzle(def);
       const playerMonoplexListener = playerMonoplexer.newMonoplexListener();
       const streamMonoplexListener = streamMonoplexer.newMonoplexListener();
-      bluetoothPuzzle.addMoveListener((moveEvent: MoveEvent) => {
+      puzzle.addMoveListener((moveEvent: MoveEvent) => {
         smartCubeKPuzzle.applyBlockMove(moveEvent.latestMove);
         moveEvent.state = smartCubeKPuzzle.state;
         playerMonoplexListener(moveEvent);
