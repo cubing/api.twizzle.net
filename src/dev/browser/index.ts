@@ -386,6 +386,8 @@ function clearStreamSelectors(message?: string) {
       );
     });
     connectSwipeGridButton.textContent = "Use swipe grid";
+    connectSwipeGridButton.disabled =
+      !("ontouchstart" in document.documentElement);
     let swipeGridActive: boolean = false;
     const swipeGridKPuzzle = new KPuzzle(def);
     connectSwipeGridButton.addEventListener("click", async () => {
