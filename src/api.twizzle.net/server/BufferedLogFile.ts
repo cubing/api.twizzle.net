@@ -30,8 +30,12 @@ export class BufferedLogFile {
     this.activeTimeout = null;
   }
 }
-
 ensureDirSync("./data/log/main");
 export const mainErrorLog = new BufferedLogFile(
   `./data/log/error.log`,
+);
+ensureDirSync("./data/log/main");
+
+export const mainInfoLog = new BufferedLogFile(
+  `./data/log/info.log`,
 );

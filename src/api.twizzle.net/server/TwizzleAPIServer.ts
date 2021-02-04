@@ -17,7 +17,7 @@ import {
 } from "../common/stream.ts";
 import { TwizzleSessionInfo } from "../common/user.ts";
 import { wcaGetToken } from "../common/wca.ts";
-import { mainErrorLog } from "./BufferedLogFile.ts";
+import { mainErrorLog, mainInfoLog } from "./BufferedLogFile.ts";
 import {
   CLIENT_APP_URL,
   TWIZZLE_WCA_APPLICATION_CLIENT_SECRET,
@@ -34,6 +34,10 @@ export class TwizzleAPIServer {
 
   restServer: Server;
   constructor() {
+    mainInfoLog.log({
+      "event": "start-server",
+      port: PORT,
+    });
     twizzleLog(this, "starting server on port:", PORT);
     this.restServer = serve({ hostname: "0.0.0.0", port: PORT });
     this.restServerLoop();
