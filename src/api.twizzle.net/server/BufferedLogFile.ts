@@ -15,7 +15,10 @@ export class BufferedLogFile {
     e.timestampHuman = now.toString();
     this.buffer += JSON.stringify(e) + "\n";
     if (this.activeTimeout === null) {
-      this.activeTimeout = setTimeout(this.flush.bind(this));
+      this.activeTimeout = setTimeout(
+        this.flush.bind(this),
+        BUFFER_DURATION_MS,
+      );
     }
   }
 
