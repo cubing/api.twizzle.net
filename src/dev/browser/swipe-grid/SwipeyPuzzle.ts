@@ -94,7 +94,7 @@ export function actionToUIText(action: Action): string {
 
 function constructTwistyPlayer(puzzleName: PuzzleID): TwistyPlayer {
   let backView = new URL(document.location.href).searchParams.get(
-    "back-view"
+    "back-view",
   ) as BackViewLayout | undefined;
   return new TwistyPlayer({
     alg: new Sequence([]),
@@ -114,13 +114,13 @@ export class SwipeyPuzzle extends HTMLElement {
   constructor(
     private puzzleName: PuzzleID,
     private actionListener: (action: Action) => void,
-    private algListener: () => void
+    private algListener: (move: BlockMove) => void,
   ) {
     super();
     this.twistyPlayer = constructTwistyPlayer(puzzleName);
 
     let theme: ThemeType = new URL(document.location.href).searchParams.get(
-      "theme"
+      "theme",
     ) as ThemeType | null;
     if (!themes.includes(theme)) {
       theme = DEFAULT_THEME;
@@ -133,7 +133,7 @@ export class SwipeyPuzzle extends HTMLElement {
     this.actionListener = actionListener;
   }
 
-  public setAlgListener(algListener: () => void): void {
+  public setAlgListener(algListener: (blockMove: BlockMove) => void): void {
     this.algListener = algListener;
   }
 
@@ -145,11 +145,11 @@ export class SwipeyPuzzle extends HTMLElement {
       setTimeout(() => {
         const icon = (this.twistyPlayer
           .viewerElems[0] as Twisty3DCanvas).renderToDataURL({
-          squareCrop: true,
-        });
+            squareCrop: true,
+          });
         console.log("Setting touch icon from canvas.");
         (document.querySelector(
-          'link[rel="apple-touch-icon"]'
+          'link[rel="apple-touch-icon"]',
         ) as HTMLLinkElement).href = icon;
       }, 100);
     }
@@ -161,7 +161,7 @@ export class SwipeyPuzzle extends HTMLElement {
       this.onMove.bind(this),
       (action: Action) => this.actionListener(action),
       true,
-      this.theme === "grid-back" ? "blank" : this.theme
+      this.theme === "grid-back" ? "blank" : this.theme,
     );
     this.appendChild(swipeGrid);
 
@@ -171,7 +171,7 @@ export class SwipeyPuzzle extends HTMLElement {
         this.onMove.bind(this),
         (action: Action) => this.actionListener(action),
         false,
-        "transparent-grid-back"
+        "transparent-grid-back",
       );
       this.prepend(swipeGridExtra);
     }
@@ -179,7 +179,7 @@ export class SwipeyPuzzle extends HTMLElement {
 
   private onMove(move: BlockMove): void {
     this.addMove(move);
-    this.algListener();
+    this.algListener(move);
   }
 
   // TODO: move this somewhere better.

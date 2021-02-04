@@ -1,4 +1,4 @@
-import { Sequence } from "cubing/alg";
+import { BlockMove, modifiedBlockMove, Sequence } from "cubing/alg";
 import {
   BluetoothPuzzle,
   connect,
@@ -16,9 +16,11 @@ import { Quaternion } from "three";
 import { TwizzleAPIClient } from "../../api.twizzle.net/client/index";
 import { Stream } from "../../api.twizzle.net/client/Stream";
 import { prod, setProd } from "../../api.twizzle.net/common/config";
-import { BinaryMoveEvent, ResetEvent } from "../../api.twizzle.net/common/stream";
+import {
+  BinaryMoveEvent,
+  ResetEvent,
+} from "../../api.twizzle.net/common/stream";
 import { mutateToBinary, mutateToTransformation } from "./binary";
-import { SwipeGrid } from "./swipe-grid/SwipeGrid";
 import { SwipeyPuzzle } from "./swipe-grid/SwipeyPuzzle";
 
 setProd(process.env.NODE_ENV === "production");
@@ -45,16 +47,18 @@ function setCurrentStreamElem(elem: Element): void {
 
 const swipeWrapper = viewerElem.appendChild(document.createElement("div"));
 swipeWrapper.classList.add("swipe-wrapper");
-const swipeyPuzzle: SwipeyPuzzle = swipeWrapper.appendChild(new SwipeyPuzzle(
-  "3x3x3",
-  console.log,
-  console.log
-));
+const swipeyPuzzle: SwipeyPuzzle = swipeWrapper.appendChild(
+  new SwipeyPuzzle(
+    "3x3x3",
+    console.log,
+    console.log,
+  ),
+);
 
 const twistyPlayer = swipeyPuzzle.twistyPlayer;
 twistyPlayer.controlPanel = "none";
 
-swipeyPuzzle.showGrid();
+// swipeyPuzzle.showGrid();
 
 class ListenerMonoplexer<E> {
   constructor(private actualListener: (e: E) => void) {}
@@ -119,7 +123,7 @@ const playerMoveMonoplexer = new ListenerMonoplexer<MoveEvent>(
 const playerOriMonoplexer = new ListenerMonoplexer<OrientationEvent>(
   (orientationEvent: OrientationEvent) => {
     setOrientation(orientationEvent);
-  }
+  },
 );
 let currentSendingStream: Stream | null = null;
 const streamMoveMonoplexer = new ListenerMonoplexer<MoveEvent>(
@@ -130,7 +134,7 @@ const streamMoveMonoplexer = new ListenerMonoplexer<MoveEvent>(
 const streamOriMonoplexer = new ListenerMonoplexer<OrientationEvent>(
   (orientationEvent: OrientationEvent) => {
     currentSendingStream?.sendOrientationEvent(orientationEvent);
-  }
+  },
 );
 
 function sameStates(
@@ -214,13 +218,13 @@ function clearStreamSelectors(message?: string) {
         }
         resetCamera();
       } else if (resetEvent) {
-        resetCamera({resetToNonTracking: !resetEvent?.trackingOrientation});
+        resetCamera({ resetToNonTracking: !resetEvent?.trackingOrientation });
       }
     }
     const playerResetMonoplexer = new ListenerMonoplexer<ResetEvent>(
       (resetEvent: ResetEvent) => {
         resetPuzzle(resetEvent);
-      }
+      },
     );
 
     const startSending = async (stream: Stream): Promise<void> => {
@@ -247,8 +251,10 @@ function clearStreamSelectors(message?: string) {
           let firstEvent = true;
           const playerMoveMonoplexListener = playerMoveMonoplexer
             .newMonoplexListener();
-          const playerOriMonoplexListener = playerOriMonoplexer.newMonoplexListener();
-          const playerResetMonoplexListener = playerResetMonoplexer.newMonoplexListener();
+          const playerOriMonoplexListener = playerOriMonoplexer
+            .newMonoplexListener();
+          const playerResetMonoplexListener = playerResetMonoplexer
+            .newMonoplexListener();
           stream.addMoveListener((binaryMoveEvent: BinaryMoveEvent) => {
             if (
               playerMoveMonoplexer.currentMonoplexListener !==
@@ -259,9 +265,17 @@ function clearStreamSelectors(message?: string) {
 
             const moveEvent = mutateToTransformation(binaryMoveEvent);
             if (firstEvent) {
+              const kpuzzle = new KPuzzle(def);
+              kpuzzle.state = moveEvent.state;
+              const newMove = modifiedBlockMove(moveEvent.latestMove, {
+                amount: -moveEvent.latestMove.amount,
+              });
+              kpuzzle.applyBlockMove(newMove);
+              twistyPlayer.alg = new Sequence([]);
               twistyPlayer.experimentalSetStartStateOverride(
-                moveEvent.state,
+                kpuzzle.state
               );
+              twistyPlayer.experimentalAddMove(moveEvent.latestMove);
               firstEvent = false;
             } else {
               playerMoveMonoplexListener(moveEvent);
@@ -280,7 +294,7 @@ function clearStreamSelectors(message?: string) {
           );
           stream.addResetListener((resetEvent: ResetEvent) => {
             playerResetMonoplexListener(resetEvent);
-          })
+          });
         }
         setCurrentStreamElem(a);
       });
@@ -298,6 +312,9 @@ function clearStreamSelectors(message?: string) {
     );
     const connectSmartPuzzleButton = connectElem.appendChild(
       document.createElement("button"),
+    );
+    const connectSwipeGridButton = connectElem.appendChild(
+      document.createElement("button")
     );
     connectKeyboardButton.textContent = "Connect keyboard";
     let keyboardPuzzle: KeyboardPuzzle | null = null;
@@ -367,6 +384,32 @@ function clearStreamSelectors(message?: string) {
           streamOriMonoplexListener(orientationEvent);
         },
       );
+    });
+    connectSwipeGridButton.textContent = "Use swipe grid";
+    let swipeGridActive: boolean = false;
+    const swipeGridKPuzzle = new KPuzzle(def);
+    connectSwipeGridButton.addEventListener("click", async () => {
+      keyboardPuzzle = null; // TODO: implement disconnection
+      smartPuzzle = null; // TODO: implement disconnection
+      connectSmartPuzzleButton.textContent = "Connected smart cube";
+      connectKeyboardButton.textContent = "Connect keyboard";
+      resetPuzzle();
+      resetPuzzleButton.disabled = false;
+      swipeGridActive = true;
+      // TODO: clean up other directions
+      playerMoveMonoplexer.newMonoplexListener(); // Handled directly by swipey grid??!?!
+      const streamMoveMonoplexListener = streamMoveMonoplexer.newMonoplexListener();
+      swipeyPuzzle.showGrid();
+      swipeyPuzzle.setAlgListener((blockMove: BlockMove) => {
+        swipeGridKPuzzle.applyBlockMove(blockMove);
+        streamMoveMonoplexListener({
+          timeStamp: Date.now(),
+          latestMove: blockMove,
+          state: swipeGridKPuzzle.state
+        });
+      });
+      playerOriMonoplexer.newMonoplexListener(); // reset to empty
+      streamOriMonoplexer.newMonoplexListener(); // reset to empty
     });
     const resetPuzzleButton = connectElem.appendChild(
       document.createElement("button"),
