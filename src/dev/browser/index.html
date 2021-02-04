@@ -1,1 +1,60 @@
-<script src="index.ts" defer></script>
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Twizzle Streaming</title>
+    <script src="index.ts" defer></script>
+  </head>
+<style>
+  html, body {
+    margin: 0;
+    height: 100%;
+    font-family: sans-serif;
+    background: #f2f2f2;
+  }
+  body {
+    display: grid;
+    grid-template-areas: "viewer controls";
+    grid-template-columns: 2fr 1fr;
+  }
+  #viewer {
+    grid-area: "viewer";
+  }
+  #viewer > twisty-player {
+    width: 100%;
+    height: 100%;
+  }
+  #controls {
+    grid-area: "controls";
+    border-left: 1px solid rgba(0, 0, 0, 0.25);
+    box-sizing: border-box;
+  }
+  h2 {
+    margin: 0;
+    background: #4285f4;
+    color: white;
+  }
+  #controls > h2 {
+    padding: 0.5em 1em;
+  }
+  #controls > div {
+    margin: 1em 1em;
+  }
+  .stream-selector {
+    display: block;
+    color: inherit;
+    padding: 0.25em 0;
+  }
+  .stream-selector:hover {
+    background: #4285f4;
+    color: white;
+  }
+</style>
+<body>
+  <div id="viewer"></div>
+  <div id="controls">
+    <h2>Twizzle Streaming</h2>
+    <div id="sign-in"></div>
+    <div id="selectors"></div>
+  </div>
+</body>
+</html>

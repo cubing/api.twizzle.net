@@ -22,12 +22,12 @@ setTimeout(async () => {
   await listeningStream.connect();
 
   await sendingStream.connect();
-  sendingStream.sendMove({
+  sendingStream.sendMoveEvent({
     timestamp: 1,
     move: BareBlockMove("R", 1),
   });
 
-  listeningStream.sendMove({
+  listeningStream.sendMoveEvent({
     timestamp: 1,
     move: BareBlockMove("R", 1),
   });

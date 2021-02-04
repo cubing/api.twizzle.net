@@ -1,9 +1,19 @@
 // import { WebSocket } from "https://deno.land/x/websocket@v0.0.5/mod.ts";
 import { TwizzleAccessToken } from "../common/auth.ts";
 import { twizzleLog } from "../common/log.ts";
-import { StreamClientToken, StreamID, StreamInfo } from "../common/stream.ts";
+import { StreamID, StreamInfo } from "../common/stream.ts";
+
+export interface MoveEvent {
+  // deno-lint-ignore no-explicit-any
+  latestMove: any;
+  timeStamp: number;
+}
+
+type MoveListener = (moveEvent: MoveEvent) => void;
 
 export class Stream {
+  #listeners: Set<MoveListener> = new Set();
+
   public streamID: StreamID;
   #streamURL: string;
   #webSocket: Promise<WebSocket> | null = null;
@@ -19,6 +29,14 @@ export class Stream {
     this.streamID = streamInfo.streamID;
     this.#streamURL = streamURL;
     this.#twizzleAccessToken = options?.twizzleAccessToken ?? null;
+  }
+
+  addListener(listener: MoveListener): void {
+    this.#listeners.add(listener);
+  }
+
+  removeListener(listener: MoveListener): void {
+    this.#listeners.delete(listener);
   }
 
   permittedToSend(): boolean {
@@ -74,7 +92,7 @@ export class Stream {
 
   // TODO: remove `any`
   // deno-lint-ignore no-explicit-any
-  sendMove(data: { timestamp: number; move: any }): void {
+  sendMoveEvent(data: { timestamp: number; move: any }): void {
     (async () => {
       if (!this.#webSocket) {
         // TODO: write test
@@ -91,8 +109,11 @@ export class Stream {
 
   // deno-lint-ignore no-explicit-any
   onMessage(messageEvent: MessageEvent<any>): void {
-    const message = JSON.parse(messageEvent.data); // TODO: error handling
+    const message: { data: MoveEvent } = JSON.parse(messageEvent.data); // TODO: error handling
     console.log("onMessage", message);
+    for (const listener of this.#listeners) {
+      listener(message.data);
+    }
   }
 
   onClose(): void {

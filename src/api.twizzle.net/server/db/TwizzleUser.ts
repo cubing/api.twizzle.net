@@ -3,6 +3,7 @@ import {
   TwizzleAccessToken,
   TwizzleUserID,
 } from "../../common/auth.ts";
+import { TwizzleUserPublicInfo } from "../../common/user.ts";
 import { WCAAccountInfo } from "../../common/wca.ts";
 import {
   newClaimToken,
@@ -17,6 +18,24 @@ export class TwizzleUser {
   // TODO: multiple tokens?
   twizzleAccessToken = newTwizzleAccessToken(); // TODO: hash?
   constructor(public wcaAccountInfo: WCAAccountInfo) {}
+
+  static findByID(id: TwizzleUserID): TwizzleUser {
+    return tables.users.get(id);
+  }
+
+  // TODO: use models better
+  static publicInfo(id: TwizzleUserID): TwizzleUserPublicInfo {
+    const fullInfo = tables.users.get(id);
+    console.log({ fullInfo });
+    const wcaID = fullInfo.wcaAccountInfo.wcaUserInfo.wca_id;
+    const name = `${fullInfo.wcaAccountInfo.wcaUserInfo.name} (${wcaID ??
+      "unverified"})`;
+    return {
+      twizzleUserID: id,
+      wcaID,
+      name,
+    };
+  }
 
   static findByClaimCoken(claimToken: ClaimToken): TwizzleUser | null {
     const maybeUserID = tables.claimIndex.get(claimToken);

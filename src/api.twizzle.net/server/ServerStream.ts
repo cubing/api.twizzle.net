@@ -4,6 +4,7 @@ import { twizzleError, twizzleLog } from "../common/log.ts";
 import { ClientID, StreamID, StreamInfo } from "../common/stream.ts";
 import { newClientID, newStreamID } from "./identifiers.ts";
 import { TwizzleUser } from "./db/TwizzleUser.ts";
+import { TwizzleUserPublicInfo } from "../common/user.ts";
 
 const STREAM_TIMEOUT_MS = 2000; //10 * 60 * 1000;
 
@@ -23,7 +24,7 @@ class ServerStreamClient {
 }
 
 export class ServerStream {
-  permittedSenders: Set<TwizzleUserID> = new Set<TwizzleUserID>();
+  permittedSenderIDs: Set<TwizzleUserID> = new Set<TwizzleUserID>();
   clients: Set<ServerStreamClient> = new Set<ServerStreamClient>();
 
   public streamID: StreamID = newStreamID();
@@ -37,30 +38,27 @@ export class ServerStream {
     initialPermittedSenders: TwizzleUser[],
   ) {
     for (const sender of initialPermittedSenders) {
-      this.permittedSenders.add(sender.id);
+      this.permittedSenderIDs.add(sender.id);
     }
     console.log(
       "initial permitted senders",
       this.streamID,
-      Array.from(this.permittedSenders.values()),
+      Array.from(this.permittedSenderIDs.values()),
     );
     this.startTerminationTimeout(); // TODO: handle no one ever connecting
   }
 
   toJSON(): StreamInfo {
-    // TODO: user lookup
-    // .map(
-    //   (user: TwizzleUser) => ({
-    //     twizzleUserID: user.id,
-    //     wcaID: user.wcaAccountInfo.wcaUserInfo.wca_id,
-    //     name: user.wcaAccountInfo.wcaUserInfo.name,
-    //   }
-    const senders = Array.from(this.permittedSenders.values());
-    console.log({ senders }, Array.from(this.permittedSenders.values())[0]);
     return {
       streamID: this.streamID,
-      senders,
+      senders: this.permittedSenderPublicInfos(),
     };
+  }
+
+  permittedSenderPublicInfos(): TwizzleUserPublicInfo[] {
+    return Array.from(this.permittedSenderIDs.values()).map(
+      (senderUserID) => TwizzleUser.publicInfo(senderUserID),
+    );
   }
 
   addClient(
@@ -76,9 +74,9 @@ export class ServerStream {
     }
 
     const clientIsPermittedToSend = !!(maybeUser &&
-      this.permittedSenders.has(maybeUser.id));
+      this.permittedSenderIDs.has(maybeUser.id));
     console.log(
-      this.permittedSenders.size,
+      this.permittedSenderIDs.size,
       maybeUser?.id,
       clientIsPermittedToSend,
     );
