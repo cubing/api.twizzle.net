@@ -10,7 +10,7 @@ import {
   StreamInfo,
 } from "../common/stream.ts";
 import { TwizzleUserPublicInfo } from "../common/user.ts";
-import { BufferedLogFile } from "./BufferedLogFile.ts";
+import { BufferedLogFile, mainErrorLog } from "./BufferedLogFile.ts";
 import { TwizzleUser } from "./db/TwizzleUser.ts";
 import { newClientID, newStreamID } from "./identifiers.ts";
 const STREAM_TIMEOUT_MS = 10 * 60 * 1000;
@@ -48,6 +48,10 @@ export class ServerStream {
   #lastMoveMessage: MessageEvent<BinaryMoveEvent> | null = null;
   #lastOrientationMessage: MessageEvent<OrientationEvent> | null = null;
   #lastResetMessage: MessageEvent<ResetEvent> | null = null;
+  // hack to work around reset loop in client
+  #lastMessage:
+    | MessageEvent<BinaryMoveEvent | OrientationEvent | ResetEvent>
+    | null = null;
 
   constructor(
     private streamTerminatedCallback: (stream: ServerStream) => void,
@@ -163,12 +167,31 @@ export class ServerStream {
         this.#bufferedLogFile.log(messageJSON);
         if (messageJSON.event === "move") {
           this.#lastMoveMessage = messageJSON;
+          this.#lastMessage = messageJSON;
         }
         if (messageJSON.event === "orientation") {
           this.#lastOrientationMessage = messageJSON;
+          this.#lastMessage = messageJSON;
         }
         if (messageJSON.event === "reset") {
+          const resetMessage: MessageEvent<ResetEvent> = messageJSON;
+          if (
+            (this.#lastMessage as MessageEvent<Partial<ResetEvent>>).data
+              .trackingOrientation === resetMessage.data.trackingOrientation
+          ) {
+            this.#bufferedLogFile.log({
+              event: "message-reset-avoiding-loop",
+              clientID: client.clientID,
+            });
+            mainErrorLog.log({
+              event: "message-reset-avoiding-loop",
+              stream: this.streamID,
+              clientID: client.clientID,
+            });
+            return;
+          }
           this.#lastResetMessage = messageJSON;
+          this.#lastMessage = messageJSON;
         }
         this.broadcast(messageJSON);
       } catch (e) {
