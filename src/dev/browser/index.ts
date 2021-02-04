@@ -234,16 +234,20 @@ function clearStreamSelectors(message?: string) {
       currentSendingStream = stream;
     };
 
-    function addStreamButton(elem: Element, stream: Stream): Element {
+    function addStreamButton(stream: Stream, sending: boolean): Element {
+      const elem = sending
+        ? streamListMineElem
+        : streamListOthersElem;
       const a = document.createElement("a");
       elem.prepend(a);
       a.classList.add("stream-selector");
       a.href = "#";
-      a.textContent = `${stream.streamInfo.senders[0]?.name ??
-        "<unknown stream>"} 0x${stream.streamID.slice(-2)}`;
+      a.appendChild(document.createElement("div")).classList.add("recording-circle");
+      a.append(`${stream.streamInfo.senders[0]?.name ??
+        "<unknown stream>"} 0x${stream.streamID.slice(-2)}`);
       a.addEventListener("click", async (e: Event) => {
         e.preventDefault();
-        if (stream.permittedToSend()) {
+        if (sending) {
           startSending(stream);
         } else {
           await stream.connect();
@@ -302,10 +306,10 @@ function clearStreamSelectors(message?: string) {
     }
 
     for (const stream of streams) {
-      const elem = stream.permittedToSend()
-        ? streamListMineElem
-        : streamListOthersElem;
-      addStreamButton(elem, stream);
+      addStreamButton(stream, false);
+      if (stream.permittedToSend()) {
+        addStreamButton(stream, true);
+      }
     }
     const connectKeyboardButton = connectElem.appendChild(
       document.createElement("button"),
@@ -428,7 +432,7 @@ function clearStreamSelectors(message?: string) {
       startStreamButton.addEventListener("click", async () => {
         const sendingStream = await client.createStream();
         setCurrentStreamElem(
-          addStreamButton(streamListMineElem, sendingStream),
+          addStreamButton(sendingStream, true),
         );
         startSending(sendingStream);
       });

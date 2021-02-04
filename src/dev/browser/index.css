@@ -57,11 +57,45 @@ h2 {
   display: block;
   color: inherit;
   padding: 0.25em 0.5em;
+  text-decoration: none;
 }
 
 .stream-selector.current {
   background: rgba(66, 133, 244);
   color: white;
+}
+
+#stream-list-mine .stream-selector .recording-circle {
+  display: none;
+}
+
+#stream-list-mine .stream-selector.current {
+  background: rgba(255, 204, 204);
+  color: black;
+}
+
+#stream-list-mine .stream-selector.current .recording-circle {
+  width: 1em;
+  height: 1em;
+  margin-right: 0.25em;
+  vertical-align: -0.12em;
+  border-radius: 0.5em;
+  display: inline-block;
+  animation-name: recording;
+  animation-duration: 1s;
+  animation-iteration-count: infinite;
+}
+
+@keyframes recording {
+  0% {
+    background-color: red;
+  }
+  50% {
+    background-color: rgba(160, 0, 0);
+  }
+  100% {
+    background-color: red;
+  }
 }
 
 .stream-selector:hover {
@@ -96,7 +130,7 @@ twisty-player {
   height: 100%;
 }
 
-@media (max-width: 640px) and (min-height: 640px), (orientation: portrait) {
+@media (max-width: 640px) and (min-height: 640px) {
   body {
     grid-template-areas: "controls" "viewer";
     grid-template-rows: 1fr 2fr;
