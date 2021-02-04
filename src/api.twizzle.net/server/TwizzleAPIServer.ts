@@ -16,12 +16,17 @@ import {
   StreamsPOSTResponse,
 } from "../common/stream.ts";
 import { wcaGetToken } from "../common/wca.ts";
-import { TWIZZLE_WCA_APPLICATION_CLIENT_SECRET } from "./config.ts";
+import {
+  CLIENT_APP_URL,
+  TWIZZLE_WCA_APPLICATION_CLIENT_SECRET,
+} from "./config.ts";
 import { ServerStream } from "./ServerStream.ts";
 import { addWCAUser, createClaimToken, TwizzleUser } from "./db/TwizzleUser.ts";
+import { TWIZZLE_PROD } from "../common/config.ts";
 
-export const REST_SERVER_PORT = 4444;
-export const STREAM_SERVER_PORT = 4445;
+console.info(`Running ${TWIZZLE_PROD ? "prod" : "dev"} server.`);
+
+export const PORT = 4444;
 
 export class TwizzleAPIServer {
   // TODO: persist streams?
@@ -30,8 +35,8 @@ export class TwizzleAPIServer {
 
   restServer: Server;
   constructor() {
-    twizzleLog(this, "starting REST server on port:", REST_SERVER_PORT);
-    this.restServer = serve({ hostname: "0.0.0.0", port: REST_SERVER_PORT });
+    twizzleLog(this, "starting REST server on port:", PORT);
+    this.restServer = serve({ hostname: "0.0.0.0", port: PORT });
     this.restServerLoop();
   }
 
@@ -48,7 +53,14 @@ export class TwizzleAPIServer {
         //     headers,
         //   });
         // }
-        if (request.method === "GET" && path === "/v0/streams") {
+        if (request.method === "GET" && path === "/") {
+          request.respond({
+            status: 200,
+            headers,
+            body:
+              "Welcome to api.twizzle.net\nContact Lucas Garron for more info.",
+          });
+        } else if (request.method === "GET" && path === "/v0/streams") {
           this.getStreams(request, headers);
         } else if (
           request.method === "POST" && path === "/v0/claim"
@@ -263,7 +275,7 @@ export class TwizzleAPIServer {
       TWIZZLE_WCA_APPLICATION_CLIENT_SECRET,
     );
     const user = addWCAUser(accountInfo);
-    const url = new URL("http://localhost:1234/"); // TODO: return_to?
+    const url = new URL(CLIENT_APP_URL); // TODO: return_to?
     url.searchParams.set("claimToken", createClaimToken(user));
     request.respond({
       status: 302,
