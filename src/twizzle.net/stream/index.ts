@@ -314,7 +314,7 @@ function clearStreamSelectors(message?: string) {
       link.classList.add("stream-link");
       const url = new URL(location.href);
       url.searchParams.set("stream", stream.id);
-      url.searchParams.set("action", sending ? "auto" : "receive");
+      url.searchParams.set("action", sending ? "auto" : "view");
       link.href = url.toString();
       link.textContent = "🔗";
       div.appendChild(link);
@@ -322,7 +322,7 @@ function clearStreamSelectors(message?: string) {
       const copyLink = div.appendChild(document.createElement("a"));
       copyLink.classList.add("stream-link");
       url.searchParams.set("stream", stream.id);
-      url.searchParams.set("action", sending ? "auto" : "receive");
+      url.searchParams.set("action", sending ? "auto" : "view");
       copyLink.href = url.toString();
       copyLink.textContent = "📋";
       copyLink.addEventListener("click", (e) => {
@@ -352,7 +352,7 @@ function clearStreamSelectors(message?: string) {
         }
       }
       let receiveSelector = addStreamSelector(stream, false);
-        if (stream.id === streamID && mode === "receive") {
+        if (stream.id === streamID && mode === "view") {
           receiveSelector.click();
         }
         if (
