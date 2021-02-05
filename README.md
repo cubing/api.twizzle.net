@@ -1,6 +1,14 @@
 # `api.twizzle.net`
 
-## Server config
+The API server for <https://twizzle.net/stream/> .
+
+If you're trying to figure out how it works,
+[`TwizzleAPIServer.ts`](./src/api.twizzle.net/server/TwizzleAPIServer.ts) is the
+core of the server implementation.
+
+## Server setup
+
+### Caddy
 
 ```shell
 sudo apt install fish unzip make
@@ -17,12 +25,10 @@ curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/config.deb.txt?distro=d
 sudo apt update
 sudo apt install caddy
 
-cd ~/api.twizzle.net/; sudo caddy start
+sudo caddy start
 ```
 
-## Running the server
-
-Setup:
+## Twizzle API server setup
 
 ```
 fish
