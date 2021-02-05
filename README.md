@@ -6,6 +6,87 @@ If you're trying to figure out how it works,
 [`TwizzleAPIServer.ts`](./src/api.twizzle.net/server/TwizzleAPIServer.ts) is the
 core of the server implementation.
 
+## API
+
+### `GET /v0/streams`
+
+Get a list of active streams.
+
+```typescript
+{
+  "streams": [
+    {
+      "streamID": string,
+      "senders": {
+        "twizzleUserID": string,
+        "wcaID": string | null,
+        "name": string,
+      },
+    },
+  ];
+}
+```
+
+### `POST /v0/streams?twizzleAccessToken={twizzleAccessToken}`
+
+Create a new stream.
+
+```typescript
+{
+  "streamID": string,
+  "senders": {
+    "twizzleUserID": string,
+    "wcaID": string | null,
+    "name": string,
+  },
+}
+```
+
+### `GET /v0/streams/{STREAM_ID}/socket?[twizzleAccessToken={twizzleAccessToken}]`
+
+Connect to a stream. The access token is optional (required for sending).
+
+Upgrades to a web socket. The protocol is still in flux; see
+[`src/api.twizzle.net/common/stream.ts`](src/api.twizzle.net/common/stream.ts)
+for message types.
+
+### `GET /v0/auth/wca/oauth_callback?code={code}`
+
+[WCA
+OAuth](https://github.com/thewca/worldcubeassociation.org/wiki/OAuth-documentation-notes)
+callback. API clients will not call this directly; the
+WCA website will send the user here.
+
+```
+Status: 302 (non-permanent redirect)
+Location: https://twizzle.net/stream/?claimToken={claimToken}
+```
+
+### `POST /v0/claim?claimToken={claimToken}`
+
+Claim the token from an OAuth redirect.
+
+```typescript
+{
+  "twizzleAccessToken": string;
+  "userInfo": {
+    "twizzleUserID": string;
+    "wcaID": WCA_ID | null;
+    "name": string;
+  }
+}
+```
+
+### `GET /v0/infra/liveness_check`
+
+```typescript
+{
+  "startTimestamp": number, // unix time in milliseconds
+  "startTimestampHuman": string, // Javascript date string
+  "uptimeSeconds": number
+}
+```
+
 ## Server setup
 
 ### Caddy
