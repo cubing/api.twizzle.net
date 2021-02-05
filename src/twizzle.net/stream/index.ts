@@ -246,6 +246,7 @@ function clearStreamSelectors(message?: string) {
       
       const a = document.createElement("a");
       a.classList.add("stream-selector");
+      a.title = sending ? "Send to this stream" : "View this stream";
       div.append(a);
       a.href = "#";
       a.appendChild(document.createElement("div")).classList.add("recording-circle");
@@ -317,6 +318,7 @@ function clearStreamSelectors(message?: string) {
       url.searchParams.set("action", sending ? "auto" : "view");
       link.href = url.toString();
       link.textContent = "🔗";
+      link.title = "Visit URL";
       div.appendChild(link);
 
       const copyLink = div.appendChild(document.createElement("a"));
@@ -334,6 +336,7 @@ function clearStreamSelectors(message?: string) {
           copyLink.classList.remove("copied");
         }, 500);
       })
+      copyLink.title = "Copy URL";
       div.appendChild(copyLink);
 
       return a;
