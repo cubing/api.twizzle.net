@@ -8,7 +8,11 @@ export class BufferedLogFile {
 
   activeTimeout: number | null = null;
 
-  constructor(private filename: string) {
+  constructor(
+    private filename: string,
+    // deno-lint-ignore no-explicit-any
+    private commonData: Record<string, any> = {},
+  ) {
     ensureDirSync(dirname(filename));
   }
 
@@ -17,13 +21,16 @@ export class BufferedLogFile {
     const now = new Date();
     e.timestampUnixMS = now.getTime();
     e.timestampHuman = now.toString();
+    Object.assign(e, this.commonData);
     this.buffer += JSON.stringify(e) + "\n";
     if (this.activeTimeout === null) {
+      // TODO: combine implementation with stream timeout
       this.activeTimeout = setTimeout(
         this.flush.bind(this),
         BUFFER_DURATION_MS,
       );
     }
+    console.log(JSON.stringify(e, null, "  "));
   }
 
   flush(): void {
@@ -35,9 +42,13 @@ export class BufferedLogFile {
 }
 
 export const mainErrorLog = new BufferedLogFile(
-  `./data/log/error.log`,
+  `./data/log/main/error.log`,
 );
 
 export const mainInfoLog = new BufferedLogFile(
-  `./data/log/info.log`,
+  `./data/log/main/info.log`,
+);
+
+export const mainAuthLog = new BufferedLogFile(
+  `./data/log/main/auth.log`,
 );

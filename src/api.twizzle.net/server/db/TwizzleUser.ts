@@ -63,7 +63,7 @@ export class TwizzleUser {
     }
     tables.claimIndex.delete(claimToken);
     usersLog.log({
-      event: "claim-user",
+      event: "claim.used",
       id: maybeUser.id,
       claimTokenEnding: claimToken.slice(-4),
     });
@@ -94,7 +94,7 @@ export function addWCAUser(wcaAccountInfo: WCAAccountInfo): TwizzleUser {
 export function addUser(user: TwizzleUser): void {
   tables.users.set(user.id, user);
   usersLog.log({
-    event: "user-add",
+    event: "user.add",
     userID: user.id,
     wcaUserInfo: user.wcaAccountInfo.wcaUserInfo,
   });
@@ -107,7 +107,7 @@ export function addUser(user: TwizzleUser): void {
 
 export function removeUser(user: TwizzleUser): void {
   usersLog.log({
-    event: "user-remove",
+    event: "user.remove",
     userID: user.id,
   });
   // TODO: Error handling in case one/both fails?
@@ -120,7 +120,7 @@ export function createClaimToken(user: TwizzleUser): ClaimToken {
   const claimToken = newClaimToken();
   tables.claimIndex.set(claimToken, user.id);
   usersLog.log({
-    event: "claim-create",
+    event: "claim.create",
     userID: user.id,
     claimTokenEnding: claimToken.slice(-4),
   });

@@ -1,6 +1,5 @@
 import { WebSocket } from "https://deno.land/std@0.85.0/ws/mod.ts";
 import { TwizzleUserID } from "../common/auth.ts";
-import { twizzleError, twizzleLog } from "../common/log.ts";
 import {
   BinaryMoveEvent,
   ClientID,
@@ -84,11 +83,9 @@ export class ServerStream {
 
   addClient(webSocket: WebSocket, maybeUser: TwizzleUser | null): void {
     if (this.#terminated) {
-      twizzleError(
-        this,
-        "attempted to add client to terminated stream",
-        this.streamID,
-      );
+      this.#bufferedLogFile.log({
+        event: "stream.already_terminated",
+      });
     }
 
     const clientIsPermittedToSend = !!(
@@ -97,7 +94,7 @@ export class ServerStream {
     const client = new ServerStreamClient(webSocket, clientIsPermittedToSend);
     this.clients.add(client);
     this.#bufferedLogFile.log({
-      event: "client-added",
+      event: "client.added",
       clientID: client.id,
       userID: maybeUser?.id ?? null,
       clientIsPermittedToSend,
@@ -134,21 +131,19 @@ export class ServerStream {
 
   onMessage(message: string, client: ServerStreamClient): void {
     if (!client.clientIsPermittedToSend) {
-      twizzleLog(
-        this,
-        "received message from client who is not permitted to send:",
-        client.id,
-      );
+      mainErrorLog.log({
+        event: "message.invalid_permission",
+        client: client.id,
+      });
       this.removeClient(client);
       return;
     } else {
       // TODO: process
       if (typeof message !== "string") {
-        twizzleLog(
-          this,
-          "error: received non-string web socket message from",
-          client.id,
-        );
+        mainErrorLog.log({
+          event: "message.non_string",
+          client: client.id,
+        });
         return;
       }
       try {
@@ -170,11 +165,11 @@ export class ServerStream {
               .trackingOrientation === resetMessage.data.trackingOrientation
           ) {
             this.#bufferedLogFile.log({
-              event: "message-reset-avoiding-loop",
+              event: "message.reset_avoiding_loop",
               clientID: client.id,
             });
             mainErrorLog.log({
-              event: "message-reset-avoiding-loop",
+              event: "message.reset_avoiding_loop",
               stream: this.streamID,
               clientID: client.id,
             });
@@ -186,7 +181,7 @@ export class ServerStream {
         this.broadcast(messageJSON);
       } catch (e) {
         this.#bufferedLogFile.log({
-          event: "message-invalid",
+          event: "message.invalid",
           clientID: client.id,
         });
       }
@@ -228,38 +223,35 @@ export class ServerStream {
   }
 
   terminationTimeout() {
-    twizzleLog(this, "timed out, terminating", this.streamID);
+    this.#bufferedLogFile.log({
+      event: "stream.timeout.due",
+      stream: this.streamID,
+    });
     if (this.numSendingClients() !== 0) {
-      twizzleError(
-        this,
-        "inconsistency: active pending termination, but not 0 sending clients",
-        this.streamID,
-      );
+      const errData = {
+        event: "stream.timeout.inconsistency",
+        message: "active pending termination, but not 0 sending clients",
+        stream: this.streamID,
+      };
+      this.#bufferedLogFile.log(errData);
+      mainErrorLog.log(errData);
     }
     this.terminate();
   }
 
   removeClient(client: ServerStreamClient): void {
-    twizzleLog(
-      this,
-      "removing client",
-      client.id,
-      "for stream",
-      this.streamID,
-    );
     client.closeIfNotYetClosed();
     this.clients.delete(client);
     this.#bufferedLogFile.log({
-      event: "client-removed",
+      event: "client.removed",
       clientID: client.id,
     });
 
     if (this.numSendingClients() === 0) {
-      twizzleLog(
-        this,
-        "0 sending clients remaining. Setting termination timeout",
-        this.streamID,
-      );
+      this.#bufferedLogFile.log({
+        event: "stream.timeout.start",
+        stream: this.streamID,
+      });
       this.startTerminationTimeout();
     }
   }

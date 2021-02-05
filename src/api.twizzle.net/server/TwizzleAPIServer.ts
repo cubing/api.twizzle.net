@@ -10,7 +10,6 @@ import {
 } from "https://deno.land/std@0.85.0/ws/mod.ts";
 import { TwizzleAccessToken } from "../common/auth.ts";
 import { prod } from "../common/config.ts";
-import { twizzleLog } from "../common/log.ts";
 import {
   StreamID,
   StreamsGETResponse,
@@ -18,7 +17,7 @@ import {
 } from "../common/stream.ts";
 import { TwizzleSessionInfo } from "../common/user.ts";
 import { wcaGetToken } from "../common/wca.ts";
-import { mainErrorLog, mainInfoLog } from "./BufferedLogFile.ts";
+import { mainAuthLog, mainErrorLog, mainInfoLog } from "./BufferedLogFile.ts";
 import {
   CLIENT_APP_URL,
   TWIZZLE_WCA_APPLICATION_CLIENT_SECRET,
@@ -43,7 +42,6 @@ export class TwizzleAPIServer {
       startTimestamp: this.startTimestamp.getTime(),
       startTimestampHuman: this.startTimestamp.toString(),
     });
-    twizzleLog(this, "starting server on port:", PORT);
     this.restServer = serve({ hostname: "0.0.0.0", port: PORT });
     this.restServerLoop();
   }
@@ -51,7 +49,11 @@ export class TwizzleAPIServer {
   async restServerLoop(): Promise<void> {
     for await (const request of this.restServer) {
       const headers = new Headers({ "Access-Control-Allow-Origin": "*" });
-      twizzleLog(this, "request for:", request.method, request.url);
+      mainInfoLog.log({
+        "event": "request.received",
+        "method": request.method,
+        "path": request.url,
+      });
       try {
         const path = new URL(request.url, "https://localhost").pathname;
         const pathParts = path.split("/").slice(1);
@@ -147,7 +149,10 @@ export class TwizzleAPIServer {
       maybeTwizzleAccessToken,
     );
     if (!maybeUser) {
-      twizzleLog(this, "invalid twizzle access token");
+      mainErrorLog.log({
+        event: "auth.invalid_token",
+        tokenEnding: maybeTwizzleAccessToken.slice(-4),
+      });
       request.respond({
         status: 401,
         headers,
@@ -179,13 +184,6 @@ export class TwizzleAPIServer {
       return;
     }
 
-    twizzleLog(
-      this,
-      "adding client for stream:",
-      streamID,
-      "for user:",
-      user?.id,
-    );
     const webSocket: WebSocket = (await acceptWebSocket({
       conn: request.conn,
       bufReader: request.r,
@@ -263,7 +261,6 @@ export class TwizzleAPIServer {
       });
       return;
     }
-    twizzleLog(this, "claim token successfully used for user", maybeUser.id);
     const twizzleSessionInfo: TwizzleSessionInfo = {
       twizzleAccessToken: maybeUser.twizzleAccessToken,
       userInfo: TwizzleUser.publicInfo(maybeUser.id),
@@ -285,7 +282,10 @@ export class TwizzleAPIServer {
       );
 
     if (!maybeCode) {
-      twizzleLog(this, "failed auth");
+      mainAuthLog.log({
+        event: "auth.wca.failed",
+        reason: "missing code",
+      });
       request.respond({
         status: 400,
         headers,
