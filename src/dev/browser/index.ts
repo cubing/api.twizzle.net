@@ -240,9 +240,13 @@ function clearStreamSelectors(message?: string) {
       const elem = sending
         ? streamListMineElem
         : streamListOthersElem;
+      const div = document.createElement("div");
+      elem.prepend(div);
+      div.classList.add("stream-selector-wrapper");
+      
       const a = document.createElement("a");
-      elem.prepend(a);
       a.classList.add("stream-selector");
+      div.append(a);
       a.href = "#";
       a.appendChild(document.createElement("div")).classList.add("recording-circle");
       a.append(`${stream.streamInfo.senders[0]?.name ??
@@ -305,6 +309,33 @@ function clearStreamSelectors(message?: string) {
         }
         setCurrentStreamElem(a);
       });
+
+      const link = div.appendChild(document.createElement("a"));
+      link.classList.add("stream-link");
+      const url = new URL(location.href);
+      url.searchParams.set("stream", stream.id);
+      url.searchParams.set("action", sending ? "send" : "receive");
+      link.href = url.toString();
+      link.textContent = "🔗";
+      div.appendChild(link);
+
+      const copyLink = div.appendChild(document.createElement("a"));
+      copyLink.classList.add("stream-link");
+      url.searchParams.set("stream", stream.id);
+      url.searchParams.set("action", sending ? "send" : "receive");
+      copyLink.href = url.toString();
+      copyLink.textContent = "📋";
+      copyLink.addEventListener("click", (e) => {
+        e.preventDefault();
+        navigator.clipboard.writeText(url.toString());
+        copyLink.classList.add("copied");
+        setTimeout(() => {
+          // TODO: handle this using CSS transitions.
+          copyLink.classList.remove("copied");
+        }, 500);
+      })
+      div.appendChild(copyLink);
+
       return a;
     }
 
