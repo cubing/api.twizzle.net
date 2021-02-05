@@ -16,7 +16,7 @@ import { newClientID, newStreamID } from "./identifiers.ts";
 const STREAM_TIMEOUT_MS = 10 * 60 * 1000;
 
 class ServerStreamClient {
-  clientID: ClientID = newClientID();
+  id: ClientID = newClientID();
   constructor(
     public webSocket: WebSocket,
     public clientIsPermittedToSend: boolean,
@@ -108,7 +108,7 @@ export class ServerStream {
     this.clients.add(client);
     this.#bufferedLogFile.log({
       event: "client-added",
-      clientID: client.clientID,
+      clientID: client.id,
       userID: maybeUser?.id ?? null,
       clientIsPermittedToSend,
     });
@@ -147,7 +147,7 @@ export class ServerStream {
       twizzleLog(
         this,
         "received message from client who is not permitted to send:",
-        client.clientID,
+        client.id,
       );
       this.removeClient(client);
       return;
@@ -157,7 +157,7 @@ export class ServerStream {
         twizzleLog(
           this,
           "error: received non-string web socket message from",
-          client.clientID,
+          client.id,
         );
         return;
       }
@@ -181,12 +181,12 @@ export class ServerStream {
           ) {
             this.#bufferedLogFile.log({
               event: "message-reset-avoiding-loop",
-              clientID: client.clientID,
+              clientID: client.id,
             });
             mainErrorLog.log({
               event: "message-reset-avoiding-loop",
               stream: this.streamID,
-              clientID: client.clientID,
+              clientID: client.id,
             });
             return;
           }
@@ -197,7 +197,7 @@ export class ServerStream {
       } catch (e) {
         this.#bufferedLogFile.log({
           event: "message-invalid",
-          clientID: client.clientID,
+          clientID: client.id,
         });
       }
     }
@@ -253,7 +253,7 @@ export class ServerStream {
     twizzleLog(
       this,
       "removing client",
-      client.clientID,
+      client.id,
       "for stream",
       this.streamID,
     );
@@ -261,7 +261,7 @@ export class ServerStream {
     this.clients.delete(client);
     this.#bufferedLogFile.log({
       event: "client-removed",
-      clientID: client.clientID,
+      clientID: client.id,
     });
 
     if (this.numSendingClients() === 0) {

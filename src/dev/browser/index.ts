@@ -22,6 +22,7 @@ import {
 } from "../../api.twizzle.net/common/stream";
 import { mutateToBinary, mutateToTransformation } from "./binary";
 import { SwipeyPuzzle } from "./swipe-grid/SwipeyPuzzle";
+import { getStreamID, getMode } from "./url-param";
 
 setProd(process.env.NODE_ENV === "production");
 // console.log("NODE_ENV:", process.env.NODE_ENV);
@@ -235,7 +236,7 @@ function clearStreamSelectors(message?: string) {
       currentSendingStream = stream;
     };
 
-    function addStreamButton(stream: Stream, sending: boolean): Element {
+    function addStreamSelector(stream: Stream, sending: boolean): HTMLAnchorElement {
       const elem = sending
         ? streamListMineElem
         : streamListOthersElem;
@@ -245,7 +246,7 @@ function clearStreamSelectors(message?: string) {
       a.href = "#";
       a.appendChild(document.createElement("div")).classList.add("recording-circle");
       a.append(`${stream.streamInfo.senders[0]?.name ??
-        "<unknown stream>"} 0x${stream.streamID.slice(-2)}`);
+        "<unknown stream>"} 0x${stream.id.slice(-2)}`);
       a.addEventListener("click", async (e: Event) => {
         e.preventDefault();
         if (sending) {
@@ -307,11 +308,29 @@ function clearStreamSelectors(message?: string) {
       return a;
     }
 
+    const streamID = getStreamID();
+    const mode = getMode();
     for (const stream of streams) {
-      addStreamButton(stream, false);
       if (stream.permittedToSend()) {
-        addStreamButton(stream, true);
+        let sendSelector = addStreamSelector(stream, true);
+        if (stream.id === streamID && mode === "send") {
+          sendSelector.click();
+        }
+        if (stream.id === streamID && mode === "auto" && stream.permittedToSend()) {
+          sendSelector.click();
+        }
       }
+      let receiveSelector = addStreamSelector(stream, false);
+        if (stream.id === streamID && mode === "receive") {
+          receiveSelector.click();
+        }
+        if (
+          stream.id === streamID &&
+          mode === "auto" &&
+          !stream.permittedToSend()
+        ) {
+          receiveSelector.click();
+        }
     }
     const connectKeyboardButton = connectElem.appendChild(
       document.createElement("button"),
@@ -434,7 +453,7 @@ function clearStreamSelectors(message?: string) {
       startStreamButton.addEventListener("click", async () => {
         const sendingStream = await client.createStream();
         setCurrentStreamElem(
-          addStreamButton(sendingStream, true),
+          addStreamSelector(sendingStream, true),
         );
         startSending(sendingStream);
       });
