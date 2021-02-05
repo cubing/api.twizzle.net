@@ -28,6 +28,14 @@ deploy-server:
 		api-twizzle-net:~/api.twizzle.net/
 	make restart-prod-api-server
 
+.PHONY: backup-server
+backup-server:
+	gcloud compute scp \
+		--project cubing --zone us-west2-b \
+		--recurse \
+		api-twizzle-net:~/api.twizzle.net/ \
+		~/.data/api.twizzle.net/backups/
+
 .PHONY: restart-prod-api-server
 restart-prod-api-server:
 	gcloud compute ssh api-twizzle-net --project cubing --zone us-west2-b -- "sudo systemctl daemon-reload; sudo systemctl restart twizzle-api-server"
