@@ -1,0 +1,14 @@
+[Unit]
+Description=Twizzle API Server
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=lgarron
+ExecStart=/usr/bin/env bash /home/lgarron/api.twizzle.net/src/prod/start-prod-server.sh
+
+[Install]
+WantedBy=multi-user.target

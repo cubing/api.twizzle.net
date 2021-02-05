@@ -19,11 +19,6 @@ deploy: deploy-server deploy-client
 deploy-server:
 	# This uploads everything every time.
 	# TODO: Figure out how to use SFTP/rsync
-	gcloud compute ssh \
-		api-twizzle-net \
-		--project cubing --zone us-west2-b \
-		-- \
-		"mkdir -p ~/api.twizzle.net"
 	gcloud compute scp \
 		--project cubing --zone us-west2-b \
 		--recurse \
@@ -35,7 +30,11 @@ deploy-server:
 
 .PHONY: restart-prod-api-server
 restart-prod-api-server:
-	gcloud compute ssh api-twizzle-net --project cubing --zone us-west2-b -- "fish -c \"cd ~/api.twizzle.net/ ; set -x TWIZZLE_WCA_APPLICATION_CLIENT_SECRET (cat ~/secrets/TWIZZLE_WCA_APPLICATION_CLIENT_SECRET.txt) ; pkill make ; nohup make prod &; disown\""
+	gcloud compute ssh api-twizzle-net --project cubing --zone us-west2-b -- "sudo systemctl daemon-reload; sudo systemctl restart twizzle-api-server"
+	@sleep 1
+	@echo "\n\n\n\n"
+	curl -i https://api.twizzle.net/v0/infra/liveness_check
+	@echo "\n\n\n\n"
 	
 CLIENT_SFTP_PATH = "towns.dreamhost.com:~/twizzle.net/stream/"
 CLIENT_URL       = "https://twizzle.net/stream/"

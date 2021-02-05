@@ -5,6 +5,7 @@
 ```shell
 sudo apt install fish unzip make
 fish
+sudo chsh -s (which fish) (whoami)
 
 # https://deno.land/manual/getting_started/installation
 curl -fsSL https://deno.land/x/install/install.sh | sh
@@ -29,12 +30,10 @@ fish
 mkdir -p ~/secrets
 read -x TWIZZLE_WCA_APPLICATION_CLIENT_SECRET
 echo $TWIZZLE_WCA_APPLICATION_CLIENT_SECRET > ~/secrets/TWIZZLE_WCA_APPLICATION_CLIENT_SECRET.txt
+
+mkdir -p ~/api.twizzle.net
+
+sudo ln -s /home/lgarron/api.twizzle.net/src/prod/twizzle-api-server.service /etc/systemd/system/twizzle-api-server.service
 ```
 
-Start:
-
-```shell
-fish
-
-cd ~/api.twizzle.net/; set -x TWIZZLE_WCA_APPLICATION_CLIENT_SECRET (cat ~/secrets/TWIZZLE_WCA_APPLICATION_CLIENT_SECRET.txt) ; pkill make; nohup make prod &
-```
+Look in [`Makefile`](./Makefile) for commands to deploy/(re-)start the server.

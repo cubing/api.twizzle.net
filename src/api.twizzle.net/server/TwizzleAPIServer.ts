@@ -32,6 +32,7 @@ export class TwizzleAPIServer {
   // TODO: persist streams?
   // TODO: store stream metada in DB?
   streams: Map<StreamID, ServerStream> = new Map<StreamID, ServerStream>();
+  startTimestamp = new Date();
 
   restServer: Server;
   constructor() {
@@ -39,6 +40,8 @@ export class TwizzleAPIServer {
       "event": "start-server",
       port: PORT,
       prod: prod(),
+      startTimestamp: this.startTimestamp.getTime(),
+      startTimestampHuman: this.startTimestamp.toString(),
     });
     twizzleLog(this, "starting server on port:", PORT);
     this.restServer = serve({ hostname: "0.0.0.0", port: PORT });
@@ -58,7 +61,23 @@ export class TwizzleAPIServer {
         //     headers,
         //   });
         // }
-        if (request.method === "GET" && path === "/") {
+        if (request.method === "GET" && path === "/v0/infra/liveness_check") {
+          request.respond({
+            status: 200,
+            headers,
+            body: JSON.stringify(
+              {
+                startTimestamp: this.startTimestamp.getTime(),
+                startTimestampHuman: this.startTimestamp.toString(),
+                uptimeSeconds: Math.floor(
+                  (Date.now() - this.startTimestamp.getTime()) / (1000),
+                ),
+              },
+              null,
+              "  ",
+            ),
+          });
+        } else if (request.method === "GET" && path === "/") {
           request.respond({
             status: 200,
             headers,
