@@ -139,8 +139,6 @@ export class TwizzleAPIServer {
       "twizzleAccessToken",
     );
 
-    console.log("Sdfdsfsdf", request.url);
-
     if (!maybeTwizzleAccessToken) {
       return { haltNow: false, user: null };
     }
@@ -157,8 +155,6 @@ export class TwizzleAPIServer {
       });
       return { haltNow: true, user: null };
     }
-
-    console.log("maybaybaybyabyaya", maybeUser.id);
 
     return { haltNow: false, user: maybeUser };
   }
@@ -206,7 +202,6 @@ export class TwizzleAPIServer {
         stream.toJSON()
       ),
     };
-    // console.log({ response });
     request.respond({
       status: 200,
       body: JSON.stringify(response),
@@ -232,12 +227,10 @@ export class TwizzleAPIServer {
   }
 
   newStream(user: TwizzleUser | null): ServerStream {
-    console.log("newStreammamama", user?.id);
     const stream = new ServerStream(
       this.streamTerminated.bind(this),
       user ? [user] : [],
     );
-    console.log("SDfsdf", stream.streamID, user?.id);
     this.streams.set(stream.streamID, stream);
     return stream;
   }

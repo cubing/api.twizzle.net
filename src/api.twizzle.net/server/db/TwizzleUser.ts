@@ -30,7 +30,6 @@ export class TwizzleUser {
   // TODO: use models better
   static publicInfo(id: TwizzleUserID): TwizzleUserPublicInfo {
     const fullInfo = tables.users.get(id);
-    // console.log({ fullInfo });
     const wcaID = fullInfo.wcaAccountInfo.wcaUserInfo.wca_id;
     const name = `${fullInfo.wcaAccountInfo.wcaUserInfo.name} (${wcaID ??
       "unverified"})`;
@@ -43,12 +42,10 @@ export class TwizzleUser {
 
   static findByWCAAccountID(wcaAccountID: WCAAccountID): TwizzleUser | null {
     const maybeUserID = tables.wcaAccountIDIndex.get(wcaAccountID.toString());
-    console.log("\n\nAA", maybeUserID);
     if (!maybeUserID) {
       return null;
     }
     const maybeUser = tables.users.get(maybeUserID);
-    console.log("CCCCCC", maybeUser?.id);
     if (!maybeUser) {
       return null;
     }
@@ -77,7 +74,6 @@ export class TwizzleUser {
     twizzleAccessToken: TwizzleAccessToken,
   ): TwizzleUser | null {
     const maybeUserID = tables.tokenIndex.get(twizzleAccessToken);
-    console.log("maybeUserID", twizzleAccessToken, maybeUserID);
     if (!maybeUserID) {
       return null;
     }
@@ -85,7 +81,6 @@ export class TwizzleUser {
     if (!maybeUser) {
       return null;
     }
-    console.log("maybeUser", twizzleAccessToken, maybeUser.id);
     return maybeUser;
   }
 }

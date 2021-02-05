@@ -60,11 +60,6 @@ export class ServerStream {
     for (const sender of initialPermittedSenders) {
       this.permittedSenderIDs.add(sender.id);
     }
-    console.log(
-      "initial permitted senders",
-      this.streamID,
-      Array.from(this.permittedSenderIDs.values()),
-    );
     this.startTerminationTimeout(); // TODO: handle no one ever connecting
 
     this.#bufferedLogFile.log({
@@ -98,11 +93,6 @@ export class ServerStream {
 
     const clientIsPermittedToSend = !!(
       maybeUser && this.permittedSenderIDs.has(maybeUser.id)
-    );
-    console.log(
-      this.permittedSenderIDs.size,
-      maybeUser?.id,
-      clientIsPermittedToSend,
     );
     const client = new ServerStreamClient(webSocket, clientIsPermittedToSend);
     this.clients.add(client);
