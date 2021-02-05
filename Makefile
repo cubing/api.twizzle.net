@@ -8,9 +8,10 @@ dev:
 prod:
 	deno run $(DENO_FLAGS) ./src/prod/serve.ts
 
+CLIENT_ENTRY_FILE=src/twizzle.net/stream/index.html
 .PHONY: dev-client
 dev-client:
-	npx parcel src/dev/browser/index.html
+	npx parcel $(CLIENT_ENTRY_FILE)
 
 .PHONY: deploy
 deploy: deploy-server deploy-client
@@ -62,7 +63,7 @@ build-prod-client: clean
 		npx parcel build \
 			--no-scope-hoist \
 			--public-url ./ \
-			src/dev/browser/index.html
+			$(CLIENT_ENTRY_FILE)
 
 .PHONY: clean
 clean:
