@@ -82,7 +82,7 @@ export class TwizzleAPIServer {
             status: 200,
             headers,
             body:
-              "Welcome to api.twizzle.net\nContact Lucas Garron for more info.",
+              "Welcome to api.twizzle.net\nSee https://github.com/cubing/api.twizzle.net for more info.",
           });
         } else if (request.method === "GET" && path === "/v0/streams") {
           this.getStreams(request, headers);
