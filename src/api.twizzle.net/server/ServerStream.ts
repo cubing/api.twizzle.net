@@ -94,7 +94,7 @@ export class ServerStream {
     const client = new ServerStreamClient(webSocket, clientIsPermittedToSend);
     this.clients.add(client);
     this.#bufferedLogFile.log({
-      event: "client.added",
+      event: "stream_client.added",
       clientID: client.id,
       userID: maybeUser?.id ?? null,
       clientIsPermittedToSend,
@@ -122,7 +122,7 @@ export class ServerStream {
         this.removeClient(client);
       } catch (e) {
         this.#bufferedLogFile.log({
-          event: "message-error",
+          event: "message.error",
           errorMessage: e.toString(),
         });
       }
@@ -243,7 +243,7 @@ export class ServerStream {
     client.closeIfNotYetClosed();
     this.clients.delete(client);
     this.#bufferedLogFile.log({
-      event: "client.removed",
+      event: "stream_client.removed",
       clientID: client.id,
     });
 

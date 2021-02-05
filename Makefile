@@ -2,7 +2,7 @@ DENO_FLAGS = --allow-write --allow-read --unstable --location http://localhost -
 
 .PHONY: dev
 dev:
-	deno run $(DENO_FLAGS) ./src/dev/test.ts
+	deno run $(DENO_FLAGS) ./src/dev/serve.ts
 
 .PHONY: prod
 prod:

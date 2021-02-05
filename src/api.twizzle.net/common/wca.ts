@@ -1,6 +1,5 @@
 // deno-lint-ignore-file  camelcase
 import { prod } from "./config.ts";
-import { twizzleLog } from "./log.ts";
 
 function TWIZZLE_WCA_CLIENT_ID(): string {
   return prod()

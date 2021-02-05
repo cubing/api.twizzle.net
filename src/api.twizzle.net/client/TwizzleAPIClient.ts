@@ -1,6 +1,5 @@
-import { ClaimToken, TwizzleAccessToken } from "../common/auth.ts";
-import { prod, setProd } from "../common/config.ts";
-import { twizzleLog } from "../common/log.ts";
+import { ClaimToken } from "../common/auth.ts";
+import { prod } from "../common/config.ts";
 import {
   StreamInfo,
   StreamsGETResponse,
@@ -38,7 +37,6 @@ export class TwizzleAPIClient {
   constructor(
     storage: Record<string, string>,
   ) {
-    twizzleLog(this, "starting");
     this.storedSessionInfo = new StoredSessionInfo(storage);
   }
 

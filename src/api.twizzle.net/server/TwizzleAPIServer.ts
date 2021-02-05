@@ -24,6 +24,7 @@ import {
 } from "./config.ts";
 import { addWCAUser, createClaimToken, TwizzleUser } from "./db/TwizzleUser.ts";
 import { ServerStream } from "./ServerStream.ts";
+import { TWIZZLE_ACCESS_TOKEN_URL_PARAM } from "./url-param.ts";
 
 export const PORT = 4444;
 
@@ -36,7 +37,7 @@ export class TwizzleAPIServer {
   restServer: Server;
   constructor() {
     mainInfoLog.log({
-      "event": "start-server",
+      "event": "serve.start",
       port: PORT,
       prod: prod(),
       startTimestamp: this.startTimestamp.getTime(),
@@ -49,20 +50,16 @@ export class TwizzleAPIServer {
   async restServerLoop(): Promise<void> {
     for await (const request of this.restServer) {
       const headers = new Headers({ "Access-Control-Allow-Origin": "*" });
-      mainInfoLog.log({
-        "event": "request.received",
-        "method": request.method,
-        "path": request.url,
-      });
       try {
+        // Trims URL params
         const path = new URL(request.url, "https://localhost").pathname;
+        mainInfoLog.log({
+          "event": "serve.request_received",
+          "method": request.method,
+          "path": path,
+        });
+
         const pathParts = path.split("/").slice(1);
-        // if (request.method === "OPTIONS" && request.url === "/v0/streams") {
-        //   request.respond({
-        //     status: 200,
-        //     headers,
-        //   });
-        // }
         if (request.method === "GET" && path === "/v0/infra/liveness_check") {
           request.respond({
             status: 200,
@@ -115,7 +112,7 @@ export class TwizzleAPIServer {
         }
       } catch (e) {
         mainErrorLog.log({
-          "error": "serve-loop-error",
+          "error": "serve.error",
           timeStamp: Date.now(),
           errorMessage: e.toString(),
         });
@@ -138,7 +135,7 @@ export class TwizzleAPIServer {
       request.url,
       "http://localhost",
     ).searchParams.get(
-      "twizzleAccessToken",
+      TWIZZLE_ACCESS_TOKEN_URL_PARAM,
     );
 
     if (!maybeTwizzleAccessToken) {

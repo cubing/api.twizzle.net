@@ -1,5 +1,4 @@
 // import { WebSocket } from "https://deno.land/x/websocket@v0.0.5/mod.ts";
-import { twizzleLog } from "../common/log.ts";
 import {
   BinaryMoveEvent,
   MoveEvent,
@@ -79,8 +78,8 @@ export class Stream {
 
   // Idempotent: reuses an existing connection (or pending connection)
   // Returns once connected.
-  async connect(options?: {streamAuthMode: StreamAuthMode}): Promise<void> {
-    twizzleLog(this, "connecting", this.id);
+  async connect(options?: { streamAuthMode: StreamAuthMode }): Promise<void> {
+    console.log(this, "connecting", this.id);
     this.#webSocket ||= new Promise((resolve, reject) => {
       console.log(this.#streamURL);
       const socketURL = new URL(this.#streamURL);
@@ -93,12 +92,12 @@ export class Stream {
       const webSocket = new WebSocket(socketURL.toString());
       const timeoutID = setTimeout(() => {
         if (!this.#connnected) {
-          twizzleLog(this, "timeout:", this.id);
+          console.log(this, "timeout:", this.id);
           reject("timeout");
         }
       }, 10000); // TODO: exponential retry?
       webSocket.onopen = () => {
-        twizzleLog(this, "connected", this.id);
+        console.log(this, "connected", this.id);
         webSocket.onmessage = this.onMessage.bind(this);
         webSocket.onclose = this.onClose.bind(this);
         this.#connnected = true;
@@ -201,7 +200,7 @@ export class Stream {
   }
 
   onClose(): void {
-    twizzleLog(this, "closed:", this.id);
+    console.log(this, "closed:", this.id);
     this.#connnected = false;
   }
 }
