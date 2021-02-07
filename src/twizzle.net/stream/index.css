@@ -31,7 +31,7 @@ body {
 
 h2 {
   margin: 0;
-  background: #4285f4;
+  background: #c41506;
   color: white;
 }
 
@@ -61,18 +61,19 @@ h2 {
   grid-template-columns: auto 1.5em 1.5em;
 }
 
-.stream-selector-wrapper .stream-selector {
+.stream-selector-wrapper a.stream-selector {
   padding: 0.25em 0.5em;
   text-decoration: none;
+  color: rgba(246, 136, 0);
 }
 
-.stream-selector-wrapper .stream-selector.current {
-  background: rgba(66, 133, 244);
+.stream-selector-wrapper a.stream-selector.current {
+  background: rgba(246, 136, 0);
   color: white;
 }
 
 .stream-selector-wrapper a.stream-selector:hover {
-  background: rgba(66, 133, 244, 0.7);
+  background: rgba(246, 136, 0, 0.7);
   color: white;
 }
 
@@ -80,12 +81,24 @@ h2 {
   display: none;
 }
 
-#stream-list-mine .stream-selector-wrapper .stream-selector.current {
+#stream-list-mine .stream-selector-wrapper a.stream-selector {
+  color: #c41506;
+}
+
+#stream-list-mine .stream-selector-wrapper a.stream-selector.current {
   background: rgba(255, 204, 204);
   color: black;
 }
 
-#stream-list-mine .stream-selector-wrapper .stream-selector.current .recording-circle {
+#stream-list-mine .stream-selector-wrapper a.stream-selector:hover {
+  background: rgba(196, 21, 6, 0.5);
+  color: black;
+}
+
+#stream-list-mine
+  .stream-selector-wrapper
+  .stream-selector.current
+  .recording-circle {
   width: 1em;
   height: 1em;
   margin-right: 0.25em;
@@ -116,11 +129,11 @@ h2 {
 }
 
 .stream-selector-wrapper a.stream-link:hover {
-  background: rgba(66, 133, 244, 0.8);
+  background: rgba(246, 136, 0, 0.8);
 }
 
 .stream-selector-wrapper a.stream-link.copied {
-  background: rgba(0, 0, 0, 0.25)
+  background: rgba(0, 0, 0, 0.25);
 }
 
 .swipe-wrapper {
