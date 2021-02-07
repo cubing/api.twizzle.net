@@ -452,7 +452,7 @@ function clearStreamSelectors(message?: string) {
     connectSwipeGridButton.addEventListener("click", async () => {
       keyboardPuzzle = null; // TODO: implement disconnection
       smartPuzzle = null; // TODO: implement disconnection
-      connectSmartPuzzleButton.textContent = "Connected smart cube";
+      connectSmartPuzzleButton.textContent = "Connect smart cube";
       connectKeyboardButton.textContent = "Connect keyboard";
       resetPuzzle();
       resetPuzzleButton.disabled = false;
