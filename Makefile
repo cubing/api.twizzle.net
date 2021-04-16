@@ -61,6 +61,7 @@ deploy-client: build-prod-client
 build-prod-client: clean
 	env NODE_ENV=production \
 		npx parcel build \
+			--no-source-maps \
 			--no-scope-hoist \
 			--public-url ./ \
 			$(CLIENT_ENTRY_FILE)
