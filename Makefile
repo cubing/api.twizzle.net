@@ -45,6 +45,11 @@ restart-prod-api-server:
 	curl -i https://api.twizzle.net/v0/infra/liveness_check
 	@echo "\n\n\n\n"
 	
+
+.PHONY: start-prod-server-caddy
+start-prod-server-caddy:
+	gcloud compute ssh api-twizzle-net --project cubing --zone us-west2-b -- "cd /home/lgarron/api.twizzle.net; sudo caddy start"
+
 CLIENT_SFTP_PATH = "towns.dreamhost.com:~/twizzle.net/stream/"
 CLIENT_URL       = "https://twizzle.net/stream/"
 

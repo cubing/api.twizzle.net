@@ -112,6 +112,8 @@ sudo caddy start
 
 ## Twizzle API server setup
 
+On the server:
+
 ```
 fish
 
@@ -122,6 +124,13 @@ echo $TWIZZLE_WCA_APPLICATION_CLIENT_SECRET > ~/secrets/TWIZZLE_WCA_APPLICATION_
 mkdir -p ~/api.twizzle.net
 
 sudo ln -s /home/lgarron/api.twizzle.net/src/prod/twizzle-api-server.service /etc/systemd/system/twizzle-api-server.service
+```
+
+Locally:
+
+```
+make deploy
+make start-prod-server-caddy # if not running
 ```
 
 Look in [`Makefile`](./Makefile) for commands to deploy/(re-)start the server.
