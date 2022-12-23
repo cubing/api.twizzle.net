@@ -11,7 +11,7 @@ import { StoredSessionInfo } from "./StoredSessionInfo.ts";
 import { Stream } from "./Stream.ts";
 
 function apiOrigin(): string {
-  return prod() ? "https://api.twizzle.net/" : "http://127.0.0.1:4444";
+  return prod() ? "https://api.twizzle.net/" : "http://127.0.0.1:3337";
 }
 
 function mainAPIURL(pathname?: string): string {

@@ -9,7 +9,7 @@ function TWIZZLE_WCA_CLIENT_ID(): string {
 function TWIZZLE_WCA_OAUTH_REDIRECT_URI(): string {
   return prod()
     ? "https://api.twizzle.net/v0/auth/wca/oauth_callback"
-    : "http://localhost:4444/v0/auth/wca/oauth_callback";
+    : "http://localhost:3337/v0/auth/wca/oauth_callback";
 }
 
 export type WCAAccountID = number;

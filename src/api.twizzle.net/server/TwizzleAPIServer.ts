@@ -26,7 +26,7 @@ import { addWCAUser, createClaimToken, TwizzleUser } from "./db/TwizzleUser.ts";
 import { ServerStream } from "./ServerStream.ts";
 import { TWIZZLE_ACCESS_TOKEN_URL_PARAM } from "./url-param.ts";
 
-export const PORT = 4444;
+export const PORT = 3337;
 
 export class TwizzleAPIServer {
   // TODO: persist streams?
